@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; frame-src 'none'; object-src 'none';">
+<title>照片轉線稿＋CMYK分層＋3D浮雕工具（3D列印燈箱用）</title>
+<style>
+  :root{
+    --bg:#14161a; --panel:#1d2026; --panel2:#242832; --line:#33384433;
+    --text:#e8eaf0; --muted:#9aa1b0; --accent:#5fb0ff; --accent2:#ff9f5f;
+    --c-col:#00b7d6; --m-col:#e8299a; --y-col:#f0c400; --ok:#4fd18b; --warn:#ff6868;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    line-height:1.55;
+  }
+  header{padding:20px 24px 8px; max-width:1400px; margin:0 auto;}
+  header h1{font-size:1.4rem; margin:0 0 6px;}
+  .privacy-banner{
+    background:#16301f; border:1px solid #2c6b45; color:#b6f0cc;
+    padding:10px 14px; border-radius:8px; font-size:0.86rem; margin:10px 0 4px;
+  }
+  main{max-width:1400px; margin:0 auto; padding:8px 24px 60px; display:grid; grid-template-columns: 380px 1fr; gap:20px;}
+  @media (max-width:980px){ main{grid-template-columns:1fr;} }
+  section.panel{
+    background:var(--panel); border:1px solid #2a2e38; border-radius:12px;
+    padding:16px; margin-bottom:16px;
+  }
+  h2{font-size:1rem; margin:0 0 12px; color:var(--accent);}
+  h3{font-size:0.88rem; margin:14px 0 6px; color:var(--muted); font-weight:600;}
+  label{display:block; font-size:0.82rem; color:var(--muted); margin:10px 0 4px;}
+  input[type=range]{width:100%;}
+  select, input[type=text]{
+    width:100%; padding:7px 8px; background:var(--panel2); color:var(--text);
+    border:1px solid #3a3f4a; border-radius:6px; font-size:0.86rem;
+  }
+  .row{display:flex; gap:8px;}
+  .row > *{flex:1;}
+  .dropzone{
+    border:2px dashed #3a3f4a; border-radius:10px; padding:22px 14px;
+    text-align:center; color:var(--muted); cursor:pointer; font-size:0.85rem;
+    transition:.15s;
+  }
+  .dropzone.drag{border-color:var(--accent); color:var(--accent);}
+  .btn{
+    display:inline-block; padding:9px 14px; border-radius:8px; border:1px solid #3a3f4a;
+    background:var(--panel2); color:var(--text); cursor:pointer; font-size:0.85rem;
+    text-align:center; width:100%; margin-top:6px;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent); color:#0a0e14; border-color:var(--accent); font-weight:700;}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .btn-row .btn{width:auto; flex:1; min-width:120px;}
+  .value-pill{float:right; color:var(--accent); font-variant-numeric:tabular-nums;}
+  .cropWrap{
+    position:relative; width:100%; aspect-ratio:1/1; background:#000; border-radius:8px;
+    overflow:hidden; touch-action:none; cursor:grab;
+  }
+  .cropWrap:active{cursor:grabbing;}
+  .cropWrap canvas{position:absolute; top:0; left:0; width:100%; height:100%;}
+  .layerGrid{display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;}
+  @media (min-width:640px){ .layerGrid{grid-template-columns:repeat(3,1fr);} }
+  .layerCard{background:var(--panel2); border-radius:10px; padding:8px; text-align:center;}
+  .layerCard canvas{width:100%; border-radius:6px; background:#fff; display:block;}
+  .layerCard .cap{font-size:0.78rem; color:var(--muted); margin-top:6px;}
+  .layerCard .dl{margin-top:6px;}
+  .tabs{display:flex; gap:6px; margin-bottom:10px;}
+  .tab{
+    padding:6px 12px; border-radius:20px; background:var(--panel2); color:var(--muted);
+    cursor:pointer; font-size:0.82rem; border:1px solid transparent;
+  }
+  .tab.active{background:var(--accent); color:#0a0e14; font-weight:700;}
+  .compositeCanvasWrap{
+    background:#000; border-radius:10px; padding:10px; display:flex; justify-content:center;
+  }
+  .compositeCanvasWrap canvas{max-width:100%; border-radius:4px;}
+  .note{font-size:0.78rem; color:var(--muted); margin-top:8px;}
+  .badge{display:inline-block; font-size:0.72rem; padding:2px 8px; border-radius:10px; background:#2a2e38; color:var(--muted); margin-left:6px;}
+  .statusLine{font-size:0.8rem; color:var(--accent2); margin-top:8px; min-height:1.2em;}
+  footer{max-width:1400px; margin:0 auto; padding:0 24px 40px; color:var(--muted); font-size:0.78rem;}
+  a{color:var(--accent);}
+  .dimHint{font-size:0.76rem; color:var(--muted); margin-top:2px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>照片轉線稿＋CMYK分層＋3D浮雕工具<span class="badge">3D列印燈箱用</span></h1>
+  <div class="privacy-banner">
+    🔒 所有影像處理（含AI主體偵測）都在您的瀏覽器本機完成，照片<strong>不會上傳到任何伺服器</strong>。本頁只會讀取與自己同一個網站內的檔案（例如 assets/ 資料夾裡的AI模型、程式庫），不會連線到任何第三方伺服器；頁面的 Content-Security-Policy 已技術性限制對外連線僅能是同網站內的資源。可部署於 GitHub Pages 等靜態託管，首次載入AI模型需要下載約19MB資料（僅模型本身，與您的照片內容無關），瀏覽器快取後之後可離線使用。
+  </div>
+</header>
+
+<main>
+  <!-- 左側：上傳、尺寸、裁切、參數 -->
+  <div>
+    <section class="panel">
+      <h2>① 上傳照片</h2>
+      <div class="dropzone" id="dropzone">拖曳照片到這裡，或點擊選擇檔案<br><span class="dimHint">建議使用清晰、對比明確的生活照</span></div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden">
+    </section>
+
+    <section class="panel">
+      <h2>② 輸出尺寸</h2>
+      <label>紙張／燈箱尺寸</label>
+      <select id="sizeSelect">
+        <option value="A5" selected>A5（148 × 210 mm）</option>
+        <option value="6x4">6×4 吋相片紙</option>
+        <option value="7x5">7×5 吋相片紙</option>
+      </select>
+      <label>方向</label>
+      <select id="orientSelect">
+        <option value="portrait">直向</option>
+        <option value="landscape">橫向</option>
+      </select>
+      <div class="dimHint" id="dimHint">解析度：—</div>
+      <div class="dimHint">固定 600 DPI（一般家用印表機常見規格）</div>
+    </section>
+
+    <section class="panel">
+      <h2>③ 裁切構圖</h2>
+      <div class="cropWrap" id="cropWrap">
+        <canvas id="cropCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
+      </div>
+      <label>縮放 <span class="value-pill" id="zoomVal">100%</span></label>
+      <input type="range" id="zoomRange" min="100" max="400" value="100">
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn primary" id="modePan" type="button">✋ 移動照片</button>
+        <button class="btn" id="modeDraw" type="button">🖌️ 標記主體</button>
+        <button class="btn" id="modeErase" type="button">🧹 擦除標記</button>
+      </div>
+      <div class="note">拖曳照片可調整位置，滑桿可放大縮小，框內範圍即為最終裁切範圍。</div>
+
+      <h3>主體遮罩（線稿僅套用此範圍，可選）</h3>
+      <button class="btn" id="aiDetect" type="button">🤖 自動偵測主體（AI，辨識人物／動物輪廓）</button>
+      <div class="dimHint" id="aiStatus"></div>
+      <label style="margin-top:10px;"><input type="checkbox" id="maskEnable" style="width:auto; display:inline-block; margin-right:6px;">線稿只呈現遮罩範圍內的主體輪廓，忽略背景</label>
+      <label>筆刷大小 <span class="value-pill" id="brushVal">40</span></label>
+      <input type="range" id="brushRange" min="8" max="150" value="40">
+      <button class="btn" id="maskClear" type="button">清除遮罩重新標記</button>
+      <div class="note">可以先按「自動偵測主體」讓AI辨識人物/動物輪廓，再用「標記主體／擦除」筆刷手動微調（補畫或去除誤判區域），類似似顏繪只勾勒主體、忽略背景雜訊。請先完成上方裁切構圖再進行標記；若之後又調整了裁切位置，建議清除後重新標記一次。</div>
+    </section>
+
+    <section class="panel">
+      <h2>④ 參數調整</h2>
+      <h3>線稿（邊緣偵測）</h3>
+      <label>靈敏度 <span class="value-pill" id="edgeVal">50</span></label>
+      <input type="range" id="edgeRange" min="1" max="100" value="50">
+      <label>去雜訊模糊（線稿更乾淨、減少雜點） <span class="value-pill" id="denoiseVal">1px</span></label>
+      <input type="range" id="denoiseRange" min="0" max="5" value="1">
+
+      <h3>灰階高度圖（3D列印用）</h3>
+      <label>亮度 <span class="value-pill" id="brightVal">0</span></label>
+      <input type="range" id="brightRange" min="-100" max="100" value="0">
+      <label>對比 <span class="value-pill" id="contrastVal">0</span></label>
+      <input type="range" id="contrastRange" min="-100" max="100" value="0">
+      <label><input type="checkbox" id="invertHeight" style="width:auto; display:inline-block; margin-right:6px;">反轉（白=薄／黑=厚 對調）</label>
+
+      <h3>CMY 通道濃度</h3>
+      <label>Cyan 青 <span class="value-pill" id="cVal">100%</span></label>
+      <input type="range" id="cRange" min="0" max="200" value="100">
+      <label>Magenta 洋紅 <span class="value-pill" id="mVal">100%</span></label>
+      <input type="range" id="mRange" min="0" max="200" value="100">
+      <label>Yellow 黃 <span class="value-pill" id="yVal">100%</span></label>
+      <input type="range" id="yRange" min="0" max="200" value="100">
+    </section>
+  </div>
+
+  <!-- 右側：預覽與輸出 -->
+  <div>
+    <section class="panel">
+      <h2>即時預覽 — 各圖層</h2>
+      <div class="layerGrid">
+        <div class="layerCard">
+          <canvas id="prevGray"></canvas>
+          <div class="cap">灰階高度圖（3D列印）</div>
+        </div>
+        <div class="layerCard">
+          <canvas id="prevLine"></canvas>
+          <div class="cap">線稿（熄燈裝飾層）</div>
+        </div>
+        <div class="layerCard">
+          <canvas id="prevC"></canvas>
+          <div class="cap" style="color:var(--c-col)">Cyan 青版</div>
+        </div>
+        <div class="layerCard">
+          <canvas id="prevM"></canvas>
+          <div class="cap" style="color:var(--m-col)">Magenta 洋紅版</div>
+        </div>
+        <div class="layerCard">
+          <canvas id="prevY"></canvas>
+          <div class="cap" style="color:var(--y-col)">Yellow 黃版</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>即時合成預覽（模擬背光疊合）</h2>
+      <div class="tabs">
+        <div class="tab active" data-mode="off">熄燈（線稿裝飾）</div>
+        <div class="tab" data-mode="on">點燈（全彩背光）</div>
+      </div>
+      <div class="row" id="litControls">
+        <div>
+          <label>背光色溫</label>
+          <select id="backlightSelect">
+            <option value="white">白光 6500K</option>
+            <option value="warm" selected>暖光 3000K（常見LED燈條）</option>
+          </select>
+        </div>
+        <div>
+          <label>散射模糊 <span class="value-pill" id="blurVal">3px</span></label>
+          <input type="range" id="blurRange" min="0" max="20" value="3">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>整體穿透衰減 <span class="value-pill" id="attenVal">25%</span></label>
+          <input type="range" id="attenRange" min="0" max="80" value="25">
+        </div>
+        <div>
+          <label>邊緣暗角 <span class="value-pill" id="vignetteVal">30%</span></label>
+          <input type="range" id="vignetteRange" min="0" max="100" value="30">
+        </div>
+      </div>
+      <div class="compositeCanvasWrap">
+        <canvas id="compositeCanvas"></canvas>
+      </div>
+      <div class="note">「熄燈」模擬燈箱最外層線稿在環境光下的樣子；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層線稿，並加上背光色溫、散射模糊、整體衰減與邊緣暗角，模擬實際LED背光穿透多層材料後偏柔和、偏暗的觀感。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
+    </section>
+
+    <section class="panel">
+      <h2>⑤ 下載列印圖層</h2>
+      <div class="btn-row">
+        <button class="btn" id="dlGrayPng">灰階高度圖 PNG</button>
+        <button class="btn" id="dlLinePng">線稿 PNG</button>
+        <button class="btn" id="dlLineSvg">線稿 SVG（雷射雕刻用）</button>
+        <button class="btn" id="dlCPng">Cyan 版 PNG</button>
+        <button class="btn" id="dlMPng">Magenta 版 PNG</button>
+        <button class="btn" id="dlYPng">Yellow 版 PNG</button>
+      </div>
+      <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
+      <div class="statusLine" id="statusLine"></div>
+      <div class="note">所有列印用圖層（線稿PNG / C / M / Y）皆已依所選尺寸輸出為 600dpi 全解析度，並在四角加上「十字線＋打孔圓點同心對位記號」，方便疊合列印後裁切、打孔對位。線稿 SVG 已依實際物理尺寸（mm）建立座標，可直接匯入雷射雕刻軟體使用。</div>
+    </section>
+
+    <section class="panel">
+      <h2>⑥ 3D列印模型匯出（STL）</h2>
+      <div class="row">
+        <div>
+          <label>底板厚度 (mm)</label>
+          <input type="text" id="baseThicknessInput" value="1.0">
+        </div>
+        <div>
+          <label>最大浮雕厚度 (mm)</label>
+          <input type="text" id="reliefThicknessInput" value="2.0">
+        </div>
+      </div>
+      <label>網格精細度 <span class="value-pill" id="meshVal">150</span></label>
+      <input type="range" id="meshRange" min="60" max="400" value="150">
+      <div class="dimHint" id="meshEstimate"></div>
+      <button class="btn primary" id="dlStl">產生並下載 STL</button>
+      <div class="statusLine" id="statusLineStl"></div>
+      <div class="note">依「④灰階高度圖」的亮度／對比／反轉設定計算浮雕：白＝薄、黑＝厚（或依反轉設定對調），厚度＝底板厚度＋最大浮雕厚度×明暗比例，輸出為含底面與四周側壁的封閉實體，可直接匯入 Cura / PrusaSlicer / Bambu Studio 等切片軟體。目前提供 STL（相容性最廣）；3MF 格式較複雜、暫未提供，未來如有需要可再補上。</div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  本工具為純前端網頁應用（含本機執行的AI主體偵測），原始碼可直接部署於 GitHub Pages 等靜態託管服務：把整個資料夾（index.html 與 assets/）上傳到您的 GitHub repo 並開啟 GitHub Pages 即可，無需任何後端伺服器。
+</footer>
+
+<script src="./assets/fflate.umd.js"></script>
+<script src="./assets/ort.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  if(typeof ort !== 'undefined'){
+    // 不手動指定 wasmPaths：onnxruntime-web 會依 ort.min.js 自己被載入的路徑（也就是 assets/ 資料夾）
+    // 自動去同一層找 .wasm/.mjs 檔案。手動指定成 './assets/' 反而會疊加成 assets/assets/ 而找不到檔案。
+    ort.env.wasm.numThreads = 1; // 避免需要 COOP/COEP 跨來源隔離標頭，GitHub Pages預設沒有這些標頭
+  }
+
+  // ---------- 尺寸定義（mm 為主，600dpi 固定） ----------
+  const DPI = 600;
+  const SIZES = {
+    A5:  { wmm: 148, hmm: 210 },
+    "6x4": { wmm: 6*25.4, hmm: 4*25.4 },
+    "7x5": { wmm: 7*25.4, hmm: 5*25.4 }
+  };
+  const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
+  const TRACE_MAX = 1400;      // 線稿向量化的工作解析度上限（避免SVG過於龐大）
+
+  function mmToPx(mm, dpi){ return Math.round(mm/25.4*dpi); }
+
+  function currentPhysicalSize(){
+    const key = document.getElementById('sizeSelect').value;
+    const orient = document.getElementById('orientSelect').value;
+    let {wmm,hmm} = SIZES[key];
+    if(orient === 'landscape' && hmm > wmm){ const t=wmm; wmm=hmm; hmm=t; }
+    if(orient === 'portrait' && wmm > hmm){ const t=wmm; wmm=hmm; hmm=t; }
+    return {wmm, hmm};
+  }
+
+  function fullPixelSize(){
+    const {wmm,hmm} = currentPhysicalSize();
+    return { w: mmToPx(wmm,DPI), h: mmToPx(hmm,DPI), wmm, hmm };
+  }
+
+  function fitSize(wmm,hmm,maxPx){
+    const ratio = wmm/hmm;
+    let w,h;
+    if(ratio >= 1){ w = maxPx; h = Math.round(maxPx/ratio); }
+    else { h = maxPx; w = Math.round(maxPx*ratio); }
+    return {w,h};
+  }
+
+  // ---------- 狀態 ----------
+  let img = null;              // 原始圖片 Image 物件
+  let crop = { zoom:1, offX:0, offY:0 }; // offX/offY 為圖片中心相對於框中心的位移(以框為單位的px, 隨拖曳更新)
+  let dragging = false, dragStart = null;
+
+  const dz = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  dz.addEventListener('click', ()=>fileInput.click());
+  ['dragenter','dragover'].forEach(evt=>dz.addEventListener(evt, e=>{e.preventDefault(); dz.classList.add('drag');}));
+  ['dragleave','drop'].forEach(evt=>dz.addEventListener(evt, e=>{e.preventDefault(); dz.classList.remove('drag');}));
+  dz.addEventListener('drop', e=>{
+    const f = e.dataTransfer.files[0];
+    if(f) loadFile(f);
+  });
+  fileInput.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(f) loadFile(f);
+  });
+
+  function loadFile(file){
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = function(){
+      img = image;
+      crop = { zoom:1, offX:0, offY:0 };
+      URL.revokeObjectURL(url);
+      updateDimHint();
+      drawCropper();
+      const mctx = maskCanvas.getContext('2d');
+      mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
+      scheduleUpdate();
+      document.getElementById('dlZip').disabled = false;
+    };
+    image.src = url;
+  }
+
+  document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
+  document.getElementById('orientSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
+
+  function updateDimHint(){
+    const {w,h,wmm,hmm} = fullPixelSize();
+    document.getElementById('dimHint').textContent =
+      `解析度：${w} × ${h} px（實際尺寸 ${wmm.toFixed(1)} × ${hmm.toFixed(1)} mm）`;
+  }
+  updateDimHint();
+
+  // ---------- 裁切器（拖曳＋縮放） ----------
+  const cropWrap = document.getElementById('cropWrap');
+  const cropCanvas = document.getElementById('cropCanvas');
+  const maskCanvas = document.getElementById('maskCanvas');
+
+  function resizeCropCanvasToBox(){
+    const {wmm,hmm} = currentPhysicalSize();
+    // cropWrap 用固定的顯示框，比例配合所選尺寸
+    const boxW = cropWrap.clientWidth;
+    const boxH = Math.round(boxW * (hmm/wmm));
+    cropWrap.style.aspectRatio = (wmm/hmm).toFixed(4);
+    // 只有實際尺寸改變時才重設canvas寬高（設定.width/.height會清空畫布內容，
+    // 若每次拖曳/縮放都呼叫都會清掉，尤其會把使用者畫的主體遮罩洗掉，所以要判斷是否真的變了）
+    if(cropCanvas.width !== boxW || cropCanvas.height !== boxH){
+      cropCanvas.width = boxW; cropCanvas.height = boxH;
+      maskCanvas.width = boxW; maskCanvas.height = boxH;
+    }
+  }
+
+  function drawCropper(){
+    resizeCropCanvasToBox();
+    const ctx = cropCanvas.getContext('2d');
+    const w = cropCanvas.width, h = cropCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,w,h);
+    if(!img) return;
+
+    // 「cover」式填滿框，再依 zoom / offset 調整
+    const boxRatio = w/h;
+    const imgRatio = img.width/img.height;
+    let baseW, baseH;
+    if(imgRatio > boxRatio){ baseH = h; baseW = h*imgRatio; }
+    else { baseW = w; baseH = w/imgRatio; }
+    const drawW = baseW * crop.zoom;
+    const drawH = baseH * crop.zoom;
+    const cx = w/2 + crop.offX;
+    const cy = h/2 + crop.offY;
+    ctx.drawImage(img, cx-drawW/2, cy-drawH/2, drawW, drawH);
+
+    // 對位參考框線
+    ctx.strokeStyle = 'rgba(95,176,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1,w-2,h-2);
+  }
+
+  function clampCrop(){
+    resizeCropCanvasToBox();
+    const w = cropCanvas.width, h = cropCanvas.height;
+    if(!img) return;
+    const boxRatio = w/h;
+    const imgRatio = img.width/img.height;
+    let baseW, baseH;
+    if(imgRatio > boxRatio){ baseH = h; baseW = h*imgRatio; }
+    else { baseW = w; baseH = w/imgRatio; }
+    const drawW = baseW*crop.zoom, drawH = baseH*crop.zoom;
+    const maxOffX = Math.max(0,(drawW - w)/2);
+    const maxOffY = Math.max(0,(drawH - h)/2);
+    crop.offX = Math.max(-maxOffX, Math.min(maxOffX, crop.offX));
+    crop.offY = Math.max(-maxOffY, Math.min(maxOffY, crop.offY));
+  }
+
+  // 互動模式：pan(移動照片) / draw(標記主體) / erase(擦除標記)
+  let interactionMode = 'pan';
+  function setMode(mode){
+    interactionMode = mode;
+    document.getElementById('modePan').classList.toggle('primary', mode==='pan');
+    document.getElementById('modeDraw').classList.toggle('primary', mode==='draw');
+    document.getElementById('modeErase').classList.toggle('primary', mode==='erase');
+    cropWrap.style.cursor = mode==='pan' ? 'grab' : 'crosshair';
+  }
+  document.getElementById('modePan').addEventListener('click', ()=>setMode('pan'));
+  document.getElementById('modeDraw').addEventListener('click', ()=>setMode('draw'));
+  document.getElementById('modeErase').addEventListener('click', ()=>setMode('erase'));
+
+  function maskPointFromEvent(e){
+    const rect = cropWrap.getBoundingClientRect();
+    const scaleX = maskCanvas.width / rect.width;
+    const scaleY = maskCanvas.height / rect.height;
+    return { x:(e.clientX-rect.left)*scaleX, y:(e.clientY-rect.top)*scaleY };
+  }
+  function paintMaskAt(x,y,erase){
+    const mctx = maskCanvas.getContext('2d');
+    const rect = cropWrap.getBoundingClientRect();
+    const r = (+document.getElementById('brushRange').value) * (maskCanvas.width/rect.width);
+    mctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+    mctx.fillStyle = 'rgba(255,40,40,0.9)';
+    mctx.beginPath();
+    mctx.arc(x,y,r,0,Math.PI*2);
+    mctx.fill();
+    mctx.globalCompositeOperation = 'source-over';
+  }
+  document.getElementById('brushRange').addEventListener('input', e=>{
+    document.getElementById('brushVal').textContent = e.target.value;
+  });
+  document.getElementById('maskClear').addEventListener('click', ()=>{
+    maskCanvas.getContext('2d').clearRect(0,0,maskCanvas.width,maskCanvas.height);
+    scheduleUpdate();
+  });
+  document.getElementById('maskEnable').addEventListener('change', scheduleUpdate);
+
+  cropWrap.addEventListener('pointerdown', e=>{
+    if(!img) return;
+    dragging = true;
+    cropWrap.setPointerCapture(e.pointerId);
+    if(interactionMode==='pan'){
+      dragStart = {x:e.clientX, y:e.clientY, offX:crop.offX, offY:crop.offY};
+    } else {
+      const {x,y} = maskPointFromEvent(e);
+      paintMaskAt(x,y, interactionMode==='erase');
+      scheduleUpdate();
+    }
+  });
+  cropWrap.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    if(interactionMode==='pan'){
+      const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+      const scaleFactor = cropCanvas.width / cropWrap.clientWidth;
+      crop.offX = dragStart.offX + dx*scaleFactor;
+      crop.offY = dragStart.offY + dy*scaleFactor;
+      clampCrop();
+      drawCropper();
+      scheduleUpdate();
+    } else {
+      const {x,y} = maskPointFromEvent(e);
+      paintMaskAt(x,y, interactionMode==='erase');
+      scheduleUpdate();
+    }
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(evt=>{
+    cropWrap.addEventListener(evt, ()=>{ dragging = false; });
+  });
+  setMode('pan');
+
+  document.getElementById('zoomRange').addEventListener('input', e=>{
+    crop.zoom = e.target.value/100;
+    document.getElementById('zoomVal').textContent = e.target.value+'%';
+    clampCrop();
+    drawCropper();
+    scheduleUpdate();
+  });
+
+  window.addEventListener('resize', ()=>{ drawCropper(); });
+
+  // 取得裁切後的 ImageData（可指定任意輸出像素尺寸：預覽解析度 或 完整600dpi解析度）
+  function getCroppedCanvas(outW, outH){
+    const out = document.createElement('canvas');
+    out.width = outW; out.height = outH;
+    const octx = out.getContext('2d');
+    if(!img) return out;
+
+    const boxRatio = outW/outH;
+    const imgRatio = img.width/img.height;
+    let baseW, baseH;
+    if(imgRatio > boxRatio){ baseH = outH; baseW = outH*imgRatio; }
+    else { baseW = outW; baseH = outW/imgRatio; }
+    const drawW = baseW*crop.zoom, drawH = baseH*crop.zoom;
+
+    // 依裁切框顯示尺寸換算位移比例到輸出尺寸
+    const dispW = cropCanvas.width || 1;
+    const ratio = outW/dispW;
+    const cx = outW/2 + crop.offX*ratio;
+    const cy = outH/2 + crop.offY*ratio;
+    octx.fillStyle = '#fff';
+    octx.fillRect(0,0,outW,outH);
+    octx.drawImage(img, cx-drawW/2, cy-drawH/2, drawW, drawH);
+    return out;
+  }
+
+  // ---------- 影像運算核心 ----------
+  function toGray(imageData){
+    const {data,width,height} = imageData;
+    const gray = new Float32Array(width*height);
+    for(let i=0,p=0;i<data.length;i+=4,p++){
+      gray[p] = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+    return gray;
+  }
+
+  function applyBrightnessContrast(gray, brightness, contrast){
+    const factor = (259*(contrast+255))/(255*(259-contrast));
+    const out = new Float32Array(gray.length);
+    for(let i=0;i<gray.length;i++){
+      let v = gray[i] + brightness*1.2;
+      v = factor*(v-128)+128;
+      out[i] = Math.max(0, Math.min(255, v));
+    }
+    return out;
+  }
+
+  // 可分離式盒狀模糊（邊緣用最近邊界像素延伸），用於邊緣偵測前的去雜訊處理
+  function boxBlur(gray, w, h, radius){
+    if(radius<=0) return gray;
+    const tmp = new Float32Array(w*h);
+    const out = new Float32Array(w*h);
+    const win = radius*2+1;
+    for(let y=0;y<h;y++){
+      let sum=0;
+      for(let x=-radius;x<=radius;x++){ sum += gray[y*w+Math.min(w-1,Math.max(0,x))]; }
+      tmp[y*w] = sum/win;
+      for(let x=1;x<w;x++){
+        const xOut = Math.min(w-1,Math.max(0,x-radius-1));
+        const xIn  = Math.min(w-1,Math.max(0,x+radius));
+        sum += gray[y*w+xIn] - gray[y*w+xOut];
+        tmp[y*w+x] = sum/win;
+      }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;
+      for(let y=-radius;y<=radius;y++){ sum += tmp[Math.min(h-1,Math.max(0,y))*w+x]; }
+      out[x] = sum/win;
+      for(let y=1;y<h;y++){
+        const yOut = Math.min(h-1,Math.max(0,y-radius-1));
+        const yIn  = Math.min(h-1,Math.max(0,y+radius));
+        sum += tmp[yIn*w+x] - tmp[yOut*w+x];
+        out[y*w+x] = sum/win;
+      }
+    }
+    return out;
+  }
+
+  function sobel(gray, w, h){
+    const gx = [-1,0,1,-2,0,2,-1,0,1];
+    const gy = [-1,-2,-1,0,0,0,1,2,1];
+    const mag = new Float32Array(w*h);
+    let max = 1;
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        let sx=0, sy=0, k=0;
+        for(let ky=-1;ky<=1;ky++){
+          for(let kx=-1;kx<=1;kx++){
+            const v = gray[(y+ky)*w+(x+kx)];
+            sx += v*gx[k]; sy += v*gy[k]; k++;
+          }
+        }
+        const m = Math.sqrt(sx*sx+sy*sy);
+        mag[y*w+x] = m;
+        if(m>max) max = m;
+      }
+    }
+    return {mag, max};
+  }
+
+  function thresholdEdges(mag, max, sensitivity){
+    // sensitivity 1~100，越高偵測到越多邊緣（threshold越低）
+    const t = max * (1 - sensitivity/100) * 0.6;
+    const w_h = mag.length;
+    const bin = new Uint8Array(w_h);
+    for(let i=0;i<w_h;i++) bin[i] = mag[i] > t ? 1 : 0;
+    return bin;
+  }
+
+  function computeLineBinary(grayRaw, w, h, edgeSens, denoiseRadius){
+    const smoothed = boxBlur(grayRaw, w, h, denoiseRadius);
+    const {mag,max} = sobel(smoothed, w, h);
+    return thresholdEdges(mag, max, edgeSens);
+  }
+
+  // 取得使用者手繪／AI產生的「主體遮罩」，縮放到指定解析度，回傳 1=保留線稿 / 0=去除
+  function getMaskSample(outW, outH){
+    const c = document.createElement('canvas'); c.width = outW; c.height = outH;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(maskCanvas, 0, 0, outW, outH);
+    const d = ctx.getImageData(0,0,outW,outH).data;
+    const out = new Uint8Array(outW*outH);
+    for(let i=0,p=0;i<d.length;i+=4,p++){
+      out[p] = d[i+3] > 128 ? 1 : 0; // 以較高的信心門檻判斷是否為主體區域，避免AI低信心雜訊被誤判為主體
+    }
+    return out;
+  }
+
+  // 若使用者勾選「僅套用主體遮罩」，把遮罩外的邊緣清除，讓線稿只剩主體輪廓
+  function applyMaskToBin(bin, w, h){
+    if(!document.getElementById('maskEnable').checked) return bin;
+    const mask = getMaskSample(w,h);
+    for(let i=0;i<bin.length;i++){ if(!mask[i]) bin[i] = 0; }
+    return bin;
+  }
+
+  // 對位十字線 + 打孔圓點記號，統一畫在四個角落（同心）
+  function drawAlignmentMarks(ctx, w, h, color){
+    color = color || 'rgba(0,0,0,0.85)';
+    const inset = Math.min(w,h) * 0.05;
+    const crossLen = Math.min(w,h) * 0.02;
+    const dotR = Math.min(w,h) * 0.006;
+    const corners = [ [inset,inset], [w-inset,inset], [inset,h-inset], [w-inset,h-inset] ];
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0015);
+    corners.forEach(([cx,cy])=>{
+      ctx.beginPath();
+      ctx.moveTo(cx-crossLen, cy); ctx.lineTo(cx+crossLen, cy);
+      ctx.moveTo(cx, cy-crossLen); ctx.lineTo(cx, cy+crossLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx,cy,dotR,0,Math.PI*2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function renderGrayCanvas(gray, w, h, invert){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    for(let i=0;i<gray.length;i++){
+      let v = gray[i];
+      if(invert) v = 255-v;
+      id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+    drawAlignmentMarks(ctx,w,h,'rgba(255,0,0,0.7)');
+    return c;
+  }
+
+  function renderLineCanvas(bin, w, h){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    for(let i=0;i<bin.length;i++){
+      const v = bin[i] ? 0 : 255;
+      id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+    drawAlignmentMarks(ctx,w,h,'rgba(0,120,255,0.8)');
+    return c;
+  }
+
+  function renderChannelCanvas(imageData, w, h, channel, strength){
+    // channel: 'c' | 'm' | 'y'
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    const src = imageData.data;
+    const f = strength/100;
+    for(let i=0,p=0;i<src.length;i+=4,p++){
+      const R=src[i], G=src[i+1], B=src[i+2];
+      let Cc = 255-R, Mm = 255-G, Yy = 255-B;
+      let r=255,g=255,b=255;
+      if(channel==='c'){ const v=Math.max(0,Math.min(255,Cc*f)); r=255-v; g=255; b=255; }
+      if(channel==='m'){ const v=Math.max(0,Math.min(255,Mm*f)); r=255; g=255-v; b=255; }
+      if(channel==='y'){ const v=Math.max(0,Math.min(255,Yy*f)); r=255; g=255; b=255-v; }
+      id.data[p*4]=r; id.data[p*4+1]=g; id.data[p*4+2]=b; id.data[p*4+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+    const markColor = channel==='c' ? 'rgba(0,183,214,0.9)' : channel==='m' ? 'rgba(232,41,154,0.9)' : 'rgba(180,150,0,0.9)';
+    drawAlignmentMarks(ctx,w,h,markColor);
+    return c;
+  }
+
+  // ---------- 線稿向量化（像素邊界追蹤 → SVG） ----------
+  function traceBinaryToSVGPath(bin, w, h){
+    const segs = [];
+    for(let y=0;y<=h;y++){
+      let runStartTop=null, runStartBottom=null;
+      for(let x=0;x<=w;x++){
+        const cur = (x<w && y<h) ? bin[y*w+x] : 0;
+        const above = (x<w && y-1>=0) ? bin[(y-1)*w+x] : 0;
+        const needTop = (cur && !above);
+        if(needTop){ if(runStartTop===null) runStartTop=x; }
+        else { if(runStartTop!==null){ segs.push([runStartTop,y,x,y]); runStartTop=null; } }
+
+        const below = (x<w && y+1<h) ? bin[(y+1)*w+x] : 0;
+        const needBottom = (cur && !below);
+        if(needBottom){ if(runStartBottom===null) runStartBottom=x; }
+        else { if(runStartBottom!==null){ segs.push([runStartBottom,y+1,x,y+1]); runStartBottom=null; } }
+      }
+    }
+    for(let x=0;x<=w;x++){
+      let runStartLeft=null, runStartRight=null;
+      for(let y=0;y<=h;y++){
+        const cur = (x<w && y<h) ? bin[y*w+x] : 0;
+        const left = (x-1>=0 && y<h) ? bin[y*w+(x-1)] : 0;
+        const needLeft = (cur && !left);
+        if(needLeft){ if(runStartLeft===null) runStartLeft=y; }
+        else { if(runStartLeft!==null){ segs.push([x,runStartLeft,x,y]); runStartLeft=null; } }
+
+        const right = (x+1<w && y<h) ? bin[y*w+(x+1)] : 0;
+        const needRight = (cur && !right);
+        if(needRight){ if(runStartRight===null) runStartRight=y; }
+        else { if(runStartRight!==null){ segs.push([x+1,runStartRight,x+1,y]); runStartRight=null; } }
+      }
+    }
+    return segs;
+  }
+
+  function buildSVG(segs, traceW, traceH, physWmm, physHmm){
+    const scaleX = physWmm/traceW, scaleY = physHmm/traceH;
+    let d = '';
+    for(const [x1,y1,x2,y2] of segs){
+      d += `M${(x1*scaleX).toFixed(3)},${(y1*scaleY).toFixed(3)} L${(x2*scaleX).toFixed(3)},${(y2*scaleY).toFixed(3)} `;
+    }
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${physWmm}mm" height="${physHmm}mm" viewBox="0 0 ${physWmm} ${physHmm}">
+<rect x="0" y="0" width="${physWmm}" height="${physHmm}" fill="none"/>
+<path d="${d}" stroke="#000000" stroke-width="0.15" fill="none"/>
+</svg>`;
+  }
+
+  // ---------- AI 主體偵測（U^2-Netp，本機執行） ----------
+  let segSession = null;
+  async function ensureSegSession(statusEl){
+    if(segSession) return segSession;
+    if(typeof ort === 'undefined'){ throw new Error('找不到 onnxruntime-web（assets/ort.min.js），請確認整個 assets 資料夾都有一起部署。'); }
+    statusEl.textContent = '首次使用，正在載入AI模型（約19MB，僅需一次，之後瀏覽器會快取）…';
+    segSession = await ort.InferenceSession.create('./assets/u2netp.onnx', {executionProviders:['wasm']});
+    return segSession;
+  }
+
+  async function runAutoSegmentation(){
+    const statusEl = document.getElementById('aiStatus');
+    if(!img){ statusEl.textContent='請先上傳照片。'; return; }
+    const btn = document.getElementById('aiDetect');
+    btn.disabled = true;
+    try{
+      const session = await ensureSegSession(statusEl);
+      statusEl.textContent = '模型已就緒，正在分析主體輪廓…';
+      await new Promise(r=>setTimeout(r,10));
+
+      const SIZE = 320;
+      const {wmm,hmm} = currentPhysicalSize();
+      const {w:sw,h:sh} = fitSize(wmm,hmm,512);
+      const srcCanvas = getCroppedCanvas(sw,sh);
+      const off = document.createElement('canvas'); off.width=SIZE; off.height=SIZE;
+      off.getContext('2d').drawImage(srcCanvas,0,0,SIZE,SIZE);
+      const {data} = off.getContext('2d').getImageData(0,0,SIZE,SIZE);
+
+      const mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
+      const plane = SIZE*SIZE;
+      const chw = new Float32Array(3*plane);
+      for(let i=0;i<plane;i++){
+        chw[i]         = (data[i*4]/255   - mean[0])/std[0];
+        chw[plane+i]   = (data[i*4+1]/255 - mean[1])/std[1];
+        chw[2*plane+i] = (data[i*4+2]/255 - mean[2])/std[2];
+      }
+      const inputName = session.inputNames[0];
+      const outputName = session.outputNames[0];
+      const tensor = new ort.Tensor('float32', chw, [1,3,SIZE,SIZE]);
+      const feeds = {}; feeds[inputName] = tensor;
+      const results = await session.run(feeds);
+      const outData = results[outputName].data; // [1,1,320,320]，0~1 顯著度
+
+      const maskTmp = document.createElement('canvas'); maskTmp.width=SIZE; maskTmp.height=SIZE;
+      const mctx2 = maskTmp.getContext('2d');
+      const outImg = mctx2.createImageData(SIZE,SIZE);
+      for(let i=0;i<plane;i++){
+        const v = Math.max(0,Math.min(1,outData[i]));
+        outImg.data[i*4]=255; outImg.data[i*4+1]=40; outImg.data[i*4+2]=40;
+        outImg.data[i*4+3]=Math.round(v*255);
+      }
+      mctx2.putImageData(outImg,0,0);
+
+      const mctx = maskCanvas.getContext('2d');
+      mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
+      mctx.drawImage(maskTmp,0,0,maskCanvas.width,maskCanvas.height);
+      document.getElementById('maskEnable').checked = true;
+      scheduleUpdate();
+      statusEl.textContent = 'AI主體偵測完成，可再用「標記主體／擦除」筆刷手動微調邊緣。';
+    } catch(err){
+      statusEl.textContent = 'AI偵測失敗：'+err.message+'（可改用手動筆刷標記主體）';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('aiDetect').addEventListener('click', runAutoSegmentation);
+
+  // ---------- 即時預覽（低解析度，反應快） ----------
+  let updateHandle = null;
+  function scheduleUpdate(){
+    if(updateHandle) cancelAnimationFrame(updateHandle);
+    updateHandle = requestAnimationFrame(runPreview);
+  }
+
+  let lastPreviewLayers = null;
+
+  function runPreview(){
+    if(!img) return;
+    const {wmm,hmm} = currentPhysicalSize();
+    const {w,h} = fitSize(wmm,hmm,PREVIEW_MAX);
+    const srcCanvas = getCroppedCanvas(w,h);
+    const sctx = srcCanvas.getContext('2d');
+    const imageData = sctx.getImageData(0,0,w,h);
+
+    const brightness = +document.getElementById('brightRange').value;
+    const contrast = +document.getElementById('contrastRange').value;
+    const invert = document.getElementById('invertHeight').checked;
+    const edgeSens = +document.getElementById('edgeRange').value;
+    const denoise = +document.getElementById('denoiseRange').value;
+    const cS = +document.getElementById('cRange').value;
+    const mS = +document.getElementById('mRange').value;
+    const yS = +document.getElementById('yRange').value;
+
+    const grayRaw = toGray(imageData);
+    const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
+    let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+    bin = applyMaskToBin(bin, w, h);
+
+    const grayCanvas = renderGrayCanvas(gray, w, h, invert);
+    const lineCanvas = renderLineCanvas(bin, w, h);
+    const cCanvas = renderChannelCanvas(imageData, w, h, 'c', cS);
+    const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
+    const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
+
+    drawInto('prevGray', grayCanvas);
+    drawInto('prevLine', lineCanvas);
+    drawInto('prevC', cCanvas);
+    drawInto('prevM', mCanvas);
+    drawInto('prevY', yCanvas);
+
+    lastPreviewLayers = {w,h,gray,invert,bin,imageData,cCanvas,mCanvas,yCanvas,grayCanvas,lineCanvas};
+    renderComposite();
+  }
+
+  function drawInto(canvasId, srcCanvas){
+    const target = document.getElementById(canvasId);
+    target.width = srcCanvas.width; target.height = srcCanvas.height;
+    target.getContext('2d').drawImage(srcCanvas,0,0);
+  }
+
+  // ---------- 合成預覽（熄燈 / 點燈） ----------
+  let compositeMode = 'off';
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      compositeMode = tab.dataset.mode;
+      renderComposite();
+    });
+  });
+
+  function renderComposite(){
+    if(!lastPreviewLayers) return;
+    const {w,h,grayCanvas,lineCanvas,cCanvas,mCanvas,yCanvas} = lastPreviewLayers;
+    const out = document.getElementById('compositeCanvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d');
+
+    if(compositeMode === 'off'){
+      ctx.fillStyle = '#cfcfcf';
+      ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(lineCanvas,0,0);
+      ctx.globalAlpha = 1;
+    } else {
+      const backlight = document.getElementById('backlightSelect').value;
+      const blurPx = +document.getElementById('blurRange').value;
+      const vignette = +document.getElementById('vignetteRange').value / 100;
+      const atten = +document.getElementById('attenRange').value / 100;
+
+      const off = document.createElement('canvas'); off.width=w; off.height=h;
+      const octx = off.getContext('2d');
+      octx.fillStyle = '#000';
+      octx.fillRect(0,0,w,h);
+      octx.drawImage(grayCanvas,0,0);
+      octx.globalCompositeOperation = 'multiply';
+      octx.drawImage(cCanvas,0,0);
+      octx.drawImage(mCanvas,0,0);
+      octx.drawImage(yCanvas,0,0);
+      octx.drawImage(lineCanvas,0,0);
+      octx.globalCompositeOperation = 'source-over';
+
+      ctx.clearRect(0,0,w,h);
+      ctx.filter = blurPx > 0 ? `blur(${blurPx}px)` : 'none';
+      ctx.drawImage(off,0,0);
+      ctx.filter = 'none';
+
+      if(backlight === 'warm'){
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(255,214,160,1)';
+        ctx.fillRect(0,0,w,h);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      if(atten > 0){
+        ctx.fillStyle = `rgba(0,0,0,${atten})`;
+        ctx.fillRect(0,0,w,h);
+      }
+      if(vignette > 0){
+        const grad = ctx.createRadialGradient(w/2,h/2, Math.min(w,h)*0.3, w/2,h/2, Math.max(w,h)*0.72);
+        grad.addColorStop(0,'rgba(0,0,0,0)');
+        grad.addColorStop(1,`rgba(0,0,0,${vignette})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,w,h);
+      }
+    }
+  }
+
+  // ---------- 參數事件綁定 ----------
+  const bindings = [
+    ['edgeRange','edgeVal', v=>v],
+    ['denoiseRange','denoiseVal', v=>v+'px'],
+    ['brightRange','brightVal', v=>v],
+    ['contrastRange','contrastVal', v=>v],
+    ['cRange','cVal', v=>v+'%'],
+    ['mRange','mVal', v=>v+'%'],
+    ['yRange','yVal', v=>v+'%'],
+  ];
+  bindings.forEach(([rangeId,labelId,fmt])=>{
+    const r = document.getElementById(rangeId);
+    r.addEventListener('input', ()=>{
+      document.getElementById(labelId).textContent = fmt(r.value);
+      scheduleUpdate();
+    });
+  });
+  document.getElementById('invertHeight').addEventListener('change', scheduleUpdate);
+
+  document.getElementById('backlightSelect').addEventListener('change', renderComposite);
+  document.getElementById('blurRange').addEventListener('input', e=>{
+    document.getElementById('blurVal').textContent = e.target.value+'px';
+    renderComposite();
+  });
+  document.getElementById('attenRange').addEventListener('input', e=>{
+    document.getElementById('attenVal').textContent = e.target.value+'%';
+    renderComposite();
+  });
+  document.getElementById('vignetteRange').addEventListener('input', e=>{
+    document.getElementById('vignetteVal').textContent = e.target.value+'%';
+    renderComposite();
+  });
+
+  // ---------- 匯出（完整 600dpi 解析度） ----------
+  function setStatus(msg){ document.getElementById('statusLine').textContent = msg; }
+
+  function computeFullLayers(){
+    const {w,h,wmm,hmm} = fullPixelSize();
+    const srcCanvas = getCroppedCanvas(w,h);
+    const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
+
+    const brightness = +document.getElementById('brightRange').value;
+    const contrast = +document.getElementById('contrastRange').value;
+    const invert = document.getElementById('invertHeight').checked;
+    const edgeSens = +document.getElementById('edgeRange').value;
+    const denoise = +document.getElementById('denoiseRange').value;
+    const cS = +document.getElementById('cRange').value;
+    const mS = +document.getElementById('mRange').value;
+    const yS = +document.getElementById('yRange').value;
+
+    const grayRaw = toGray(imageData);
+    const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
+    const grayCanvas = renderGrayCanvas(gray, w, h, invert);
+    const cCanvas = renderChannelCanvas(imageData, w, h, 'c', cS);
+    const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
+    const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
+
+    let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+    bin = applyMaskToBin(bin, w, h);
+    const lineCanvas = renderLineCanvas(bin, w, h);
+
+    const {w:tw,h:th} = fitSize(wmm,hmm,TRACE_MAX);
+    const traceCanvas = getCroppedCanvas(tw,th);
+    const traceImageData = traceCanvas.getContext('2d').getImageData(0,0,tw,th);
+    const traceGray = toGray(traceImageData);
+    let tbin = computeLineBinary(traceGray, tw, th, edgeSens, Math.max(1,Math.round(denoise*tw/w)));
+    tbin = applyMaskToBin(tbin, tw, th);
+    const segs = traceBinaryToSVGPath(tbin, tw, th);
+    const svgText = buildSVG(segs, tw, th, wmm, hmm);
+
+    return {w,h,wmm,hmm, gray, grayCanvas, lineCanvas, cCanvas, mCanvas, yCanvas, svgText};
+  }
+
+  function canvasToPNGBlob(canvas){
+    return new Promise(resolve=> canvas.toBlob(b=>resolve(b), 'image/png'));
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+
+  async function exportSingle(key){
+    if(!img){ setStatus('請先上傳照片。'); return; }
+    setStatus('處理中，請稍候…（完整解析度運算需要一點時間）');
+    await new Promise(r=>setTimeout(r,30));
+    const layers = computeFullLayers();
+    if(key==='gray'){ downloadBlob(await canvasToPNGBlob(layers.grayCanvas), 'gray-heightmap.png'); }
+    if(key==='line'){ downloadBlob(await canvasToPNGBlob(layers.lineCanvas), 'lineart.png'); }
+    if(key==='linesvg'){ downloadBlob(new Blob([layers.svgText],{type:'image/svg+xml'}), 'lineart.svg'); }
+    if(key==='c'){ downloadBlob(await canvasToPNGBlob(layers.cCanvas), 'layer-cyan.png'); }
+    if(key==='m'){ downloadBlob(await canvasToPNGBlob(layers.mCanvas), 'layer-magenta.png'); }
+    if(key==='y'){ downloadBlob(await canvasToPNGBlob(layers.yCanvas), 'layer-yellow.png'); }
+    setStatus('完成，檔案已下載。');
+  }
+
+  document.getElementById('dlGrayPng').addEventListener('click', ()=>exportSingle('gray'));
+  document.getElementById('dlLinePng').addEventListener('click', ()=>exportSingle('line'));
+  document.getElementById('dlLineSvg').addEventListener('click', ()=>exportSingle('linesvg'));
+  document.getElementById('dlCPng').addEventListener('click', ()=>exportSingle('c'));
+  document.getElementById('dlMPng').addEventListener('click', ()=>exportSingle('m'));
+  document.getElementById('dlYPng').addEventListener('click', ()=>exportSingle('y'));
+
+  function strToBytes(str){ return new TextEncoder().encode(str); }
+
+  // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
+  document.getElementById('dlZip').addEventListener('click', async ()=>{
+    if(!img){ setStatus('請先上傳照片。'); return; }
+    if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js），請確認 assets 資料夾已一併部署。'); return; }
+    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…');
+    await new Promise(r=>setTimeout(r,30));
+    const layers = computeFullLayers();
+    const [grayBlob, lineBlob, cBlob, mBlob, yBlob] = await Promise.all([
+      canvasToPNGBlob(layers.grayCanvas),
+      canvasToPNGBlob(layers.lineCanvas),
+      canvasToPNGBlob(layers.cCanvas),
+      canvasToPNGBlob(layers.mCanvas),
+      canvasToPNGBlob(layers.yCanvas),
+    ]);
+    async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
+    const readme = `照片轉線稿＋CMYK分層工具 — 輸出說明
+
+尺寸：${layers.wmm.toFixed(1)} x ${layers.hmm.toFixed(1)} mm（600 DPI，${layers.w} x ${layers.h} px）
+
+檔案：
+- gray-heightmap.png：灰階高度圖，供3D列印轉換浮雕層厚使用（白=亮/薄，黑=暗/厚，可於工具中反轉）；也可以直接用「⑥ 3D列印模型匯出」按鈕產生STL檔。
+- lineart.png / lineart.svg：線稿，PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。若有開啟「主體遮罩」（含AI自動偵測），線稿只會保留標記範圍內的輪廓。
+- layer-cyan.png / layer-magenta.png / layer-yellow.png：CMY調色透明片，供一般CMYK印表機列印在透明列印紙上，依序疊合、背光呈現全彩
+
+所有列印用圖層皆已加上「十字線＋打孔圓點」同心對位記號（四角，可肉眼疊合對位，也可直接打洞穿對位針），座標於各圖層間一致，請依相同尺寸列印以確保疊合精準。
+`;
+    const files = {
+      'gray-heightmap.png': await toU8(grayBlob),
+      'lineart.png': await toU8(lineBlob),
+      'lineart.svg': strToBytes(layers.svgText),
+      'layer-cyan.png': await toU8(cBlob),
+      'layer-magenta.png': await toU8(mBlob),
+      'layer-yellow.png': await toU8(yBlob),
+      'README.txt': strToBytes(readme)
+    };
+    const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PNG本身已壓縮過，圖層檔案不需再壓一次
+    const zipBlob = new Blob([zipped], {type:'application/zip'});
+    downloadBlob(zipBlob, 'photo-lithobox-layers.zip');
+    setStatus('完成，ZIP 已下載，內含全部5個檔案＋說明文件。');
+  });
+
+  // ---------- 3D列印模型匯出（灰階高度圖 → 封閉實體 → 二進位STL） ----------
+  function downsampleGray(grayFull, w, h, targetLongEdge){
+    const {w:gw,h:gh} = fitSize(w, h, targetLongEdge); // fitSize只用比例，直接傳像素寬高當比例來源亦成立
+    const out = new Float32Array(Math.max(2,gw)*Math.max(2,gh));
+    const GW = Math.max(2,gw), GH = Math.max(2,gh);
+    for(let gy=0; gy<GH; gy++){
+      const sy = Math.min(h-1, Math.round(gy*(h-1)/(GH-1)));
+      for(let gx=0; gx<GW; gx++){
+        const sx = Math.min(w-1, Math.round(gx*(w-1)/(GW-1)));
+        out[gy*GW+gx] = grayFull[sy*w+sx];
+      }
+    }
+    return { data: out, gw:GW, gh:GH };
+  }
+
+  function estimateSTL(gw, gh){
+    const nQuadsTop = (gw-1)*(gh-1);
+    const nSideQuads = 2*(gw-1) + 2*(gh-1);
+    const totalTri = nQuadsTop*4 + nSideQuads*2;
+    const bytes = 84 + totalTri*50;
+    return {totalTri, bytes};
+  }
+
+  function updateSTLEstimate(){
+    const meshLongEdge = +document.getElementById('meshRange').value;
+    const {wmm,hmm} = currentPhysicalSize();
+    const {w:gw,h:gh} = fitSize(wmm,hmm,meshLongEdge);
+    const {totalTri, bytes} = estimateSTL(Math.max(2,gw), Math.max(2,gh));
+    document.getElementById('meshEstimate').textContent =
+      `約 ${Math.max(2,gw)}×${Math.max(2,gh)} 網格、${totalTri.toLocaleString()} 個三角形，檔案約 ${(bytes/1024/1024).toFixed(1)} MB`;
+  }
+  document.getElementById('meshRange').addEventListener('input', e=>{
+    document.getElementById('meshVal').textContent = e.target.value;
+    updateSTLEstimate();
+  });
+  updateSTLEstimate();
+
+  function buildHeightmapSTL(gridGray, gw, gh, physWmm, physHmm, baseT, reliefT, invert){
+    const stepX = physWmm/(gw-1);
+    const stepY = physHmm/(gh-1);
+    function hAt(x,y){
+      let v = gridGray[y*gw+x]/255;
+      if(invert) v = 1-v;
+      return baseT + reliefT*(1-v); // 亮(v→1)较薄、暗(v→0)较厚；反轉時對調
+    }
+    function px(x){ return x*stepX; }
+    function py(y){ return (gh-1-y)*stepY; }
+
+    const {totalTri} = estimateSTL(gw,gh);
+    const buf = new ArrayBuffer(84 + totalTri*50);
+    const view = new DataView(buf);
+    const header = 'STL from photo-to-cmyk-lithobox heightmap relief';
+    for(let i=0;i<Math.min(80,header.length);i++) view.setUint8(i, header.charCodeAt(i));
+    view.setUint32(80, totalTri, true);
+    let off = 84;
+
+    function writeTri(ax,ay,az,bx,by,bz,cx,cy,cz){
+      const ux=bx-ax, uy=by-ay, uz=bz-az;
+      const vx=cx-ax, vy=cy-ay, vz=cz-az;
+      let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+      const len=Math.hypot(nx,ny,nz)||1;
+      nx/=len; ny/=len; nz/=len;
+      view.setFloat32(off,nx,true); off+=4;
+      view.setFloat32(off,ny,true); off+=4;
+      view.setFloat32(off,nz,true); off+=4;
+      view.setFloat32(off,ax,true); off+=4;
+      view.setFloat32(off,ay,true); off+=4;
+      view.setFloat32(off,az,true); off+=4;
+      view.setFloat32(off,bx,true); off+=4;
+      view.setFloat32(off,by,true); off+=4;
+      view.setFloat32(off,bz,true); off+=4;
+      view.setFloat32(off,cx,true); off+=4;
+      view.setFloat32(off,cy,true); off+=4;
+      view.setFloat32(off,cz,true); off+=4;
+      view.setUint16(off,0,true); off+=2;
+    }
+
+    // 頂面（法線朝上）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        const z00=hAt(x,y), z10=hAt(x+1,y), z01=hAt(x,y+1), z11=hAt(x+1,y+1);
+        writeTri(x0,y0,z00, x1,y1,z11, x1,y0,z10);
+        writeTri(x0,y0,z00, x0,y1,z01, x1,y1,z11);
+      }
+    }
+    // 底面（z=0，法線朝下）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        writeTri(x0,y0,0, x1,y0,0, x1,y1,0);
+        writeTri(x0,y0,0, x1,y1,0, x0,y1,0);
+      }
+    }
+    // 側面：y=0（前緣，世界座標Y為最大值，外法線應朝+Y）與 y=gh-1（後緣，世界座標Y=0，外法線應朝-Y）
+    for(let x=0;x<gw-1;x++){
+      let x0=px(x), x1=px(x+1);
+      let yv=py(0), zt0=hAt(x,0), zt1=hAt(x+1,0);
+      writeTri(x0,yv,0, x0,yv,zt0, x1,yv,zt1);
+      writeTri(x0,yv,0, x1,yv,zt1, x1,yv,0);
+      yv=py(gh-1); zt0=hAt(x,gh-1); zt1=hAt(x+1,gh-1);
+      writeTri(x0,yv,0, x1,yv,zt1, x0,yv,zt0);
+      writeTri(x0,yv,0, x1,yv,0, x1,yv,zt1);
+    }
+    // 側面：x=0（左緣）與 x=gw-1（右緣）
+    for(let y=0;y<gh-1;y++){
+      let y0=py(y), y1=py(y+1);
+      let xv=px(0), zt0=hAt(0,y), zt1=hAt(0,y+1);
+      writeTri(xv,y0,0, xv,y1,zt1, xv,y0,zt0);
+      writeTri(xv,y0,0, xv,y1,0, xv,y1,zt1);
+      xv=px(gw-1); zt0=hAt(gw-1,y); zt1=hAt(gw-1,y+1);
+      writeTri(xv,y0,0, xv,y0,zt0, xv,y1,zt1);
+      writeTri(xv,y0,0, xv,y1,zt1, xv,y1,0);
+    }
+
+    return new Blob([buf], {type:'model/stl'});
+  }
+
+  document.getElementById('dlStl').addEventListener('click', async ()=>{
+    const statusEl = document.getElementById('statusLineStl');
+    if(!img){ statusEl.textContent = '請先上傳照片。'; return; }
+    statusEl.textContent = '處理中，正在產生3D網格，請稍候…';
+    await new Promise(r=>setTimeout(r,30));
+    try{
+      const {w,h,wmm,hmm} = fullPixelSize();
+      const srcCanvas = getCroppedCanvas(w,h);
+      const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
+      const brightness = +document.getElementById('brightRange').value;
+      const contrast = +document.getElementById('contrastRange').value;
+      const invert = document.getElementById('invertHeight').checked;
+      const grayRaw = toGray(imageData);
+      const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
+
+      const meshLongEdge = +document.getElementById('meshRange').value;
+      const baseT = Math.max(0.2, +document.getElementById('baseThicknessInput').value || 1.0);
+      const reliefT = Math.max(0.1, +document.getElementById('reliefThicknessInput').value || 2.0);
+
+      const {data:gridGray, gw, gh} = downsampleGray(gray, w, h, meshLongEdge);
+      const blob = buildHeightmapSTL(gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert);
+      downloadBlob(blob, 'relief-model.stl');
+      statusEl.textContent = `完成，STL已下載（${gw}×${gh} 網格，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
+    } catch(err){
+      statusEl.textContent = '產生STL失敗：'+err.message;
+      console.error(err);
+    }
+  });
+
+  // 初始化
+  drawCropper();
+})();
+</script>
+</body>
+</html>
