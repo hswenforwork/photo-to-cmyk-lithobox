@@ -168,7 +168,16 @@
         </select>
         <button class="btn primary" id="animeGenerateBtn" type="button">🎨 產生／更新日式似顏繪風格預覽</button>
         <div class="dimHint" id="animeStatus"></div>
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽；若之後又調整了裁切、尺寸、遮罩或畫風，請重新按一次按鈕更新。下載/打包時會以較高解析度重新產生，不受此處預覽影響。（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+
+        <label>風格強度（與原照片混合） <span class="value-pill" id="animeIntensityVal">100%</span></label>
+        <input type="range" id="animeIntensityRange" min="0" max="100" value="100">
+        <label>亮度 <span class="value-pill" id="animeBrightVal">0</span></label>
+        <input type="range" id="animeBrightRange" min="-100" max="100" value="0">
+        <label>對比 <span class="value-pill" id="animeContrastVal">0</span></label>
+        <input type="range" id="animeContrastRange" min="-100" max="100" value="0">
+        <label>飽和度 <span class="value-pill" id="animeSaturateVal">0</span></label>
+        <input type="range" id="animeSaturateRange" min="-100" max="100" value="0">
+        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽；若之後又調整了裁切、尺寸、遮罩或畫風，請重新按一次按鈕更新。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。下載/打包時會以較高解析度重新產生並套用當下的滑桿數值。（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -348,7 +357,14 @@
   function ensureTfjsLoaded(){
     if(typeof tf !== 'undefined') return Promise.resolve();
     if(tfjsLoadPromise) return tfjsLoadPromise;
-    tfjsLoadPromise = loadScriptOnce('./assets/tfjs.min.js').catch(err=>{ tfjsLoadPromise = null; throw err; });
+    tfjsLoadPromise = loadScriptOnce('./assets/tfjs.min.js').then(()=>{
+      // 關閉WebGL的「打包貼圖」優化：長時間使用（多次觸發AI風格轉換，尤其預覽與匯出解析度不同）
+      // 會讓打包貼圖持續增長，最終可能超過顯示卡的貼圖尺寸上限而報錯
+      // （Requested texture size ... greater than WebGL maximum），關閉後改用未打包的一般貼圖，較穩定。
+      // 同時把閒置貼圖的回收門檻設為0，讓用不到的GPU記憶體盡快釋放，避免累積。
+      tf.env().set('WEBGL_PACK', false);
+      tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
+    }).catch(err=>{ tfjsLoadPromise = null; throw err; });
     return tfjsLoadPromise;
   }
   let tfWasmLoadPromise = null;
@@ -415,25 +431,51 @@
     return model;
   }
   function roundTo4(n){ return Math.max(4, Math.round(n/4)*4); }
-  // 對來源canvas執行CartoonGAN風格轉換，回傳新的RGB canvas（尺寸為調整到4的倍數後的工作解析度）
-  async function runCartoonStylize(styleKey, srcCanvas, statusEl){
+  // 對來源canvas執行一次CartoonGAN風格轉換，回傳新的RGB canvas（尺寸為調整到4的倍數後的工作解析度）
+  async function runCartoonStylizeOnce(styleKey, srcCanvas, statusEl){
     const model = await ensureCartoonModel(styleKey, statusEl);
     if(statusEl) statusEl.textContent = `正在以「${CARTOON_STYLES[styleKey].label}」進行AI風格轉換…`;
     const w = roundTo4(srcCanvas.width), h = roundTo4(srcCanvas.height);
     const work = document.createElement('canvas'); work.width = w; work.height = h;
     work.getContext('2d').drawImage(srcCanvas, 0, 0, w, h);
     const out = document.createElement('canvas'); out.width = w; out.height = h;
-    // 注意：tf.tidy() 不能包住 await tf.browser.toPixels() 這種非同步呼叫（tidy 會在同步函式return當下就釋放張量，
-    // 早於非同步的toPixels讀取完成），所以這裡改成手動管理張量的建立與釋放
-    const input = tf.tidy(() => tf.expandDims(tf.browser.fromPixels(work).toFloat().reverse(2), 0));
-    const rawResult = model.predict(input);
-    const result = tf.tidy(() => tf.clipByValue(tf.squeeze(rawResult, [0]).reverse(2).mul(0.5).add(0.5), 0, 1));
-    input.dispose();
-    rawResult.dispose();
-    await tf.browser.toPixels(result, out);
-    result.dispose();
+    // 手動管理張量的建立與釋放（而非單純包in tf.tidy）：
+    // 1) await tf.browser.toPixels() 是非同步呼叫，tf.tidy()會在同步函式return當下就釋放張量，早於toPixels讀取完成
+    // 2) 用 try/finally 確保即使中途拋出例外（如本函式外層要攔截的貼圖尺寸錯誤），已建立的張量也一定會被釋放，不會外洩
+    let input=null, rawResult=null, result=null;
+    try{
+      input = tf.tidy(() => tf.expandDims(tf.browser.fromPixels(work).toFloat().reverse(2), 0));
+      rawResult = model.predict(input);
+      result = tf.tidy(() => tf.clipByValue(tf.squeeze(rawResult, [0]).reverse(2).mul(0.5).add(0.5), 0, 1));
+      input.dispose(); input = null;
+      rawResult.dispose(); rawResult = null;
+      await tf.browser.toPixels(result, out);
+    } finally {
+      if(input) input.dispose();
+      if(rawResult) rawResult.dispose();
+      if(result) result.dispose();
+    }
     if(statusEl) statusEl.textContent = '';
     return out;
+  }
+
+  // 對來源canvas執行CartoonGAN風格轉換；長時間使用WebGL backend後，偶爾會因內部貼圖管理累積
+  // 而觸發「Requested texture size ... greater than WebGL maximum」錯誤，遇到時自動改用WASM backend重試一次
+  async function runCartoonStylize(styleKey, srcCanvas, statusEl){
+    try{
+      return await runCartoonStylizeOnce(styleKey, srcCanvas, statusEl);
+    } catch(err){
+      const isTextureSizeErr = /texture size|webgl/i.test((err && err.message) || '');
+      if(isTextureSizeErr && tf.getBackend() === 'webgl'){
+        console.warn('WebGL執行失敗（可能是貼圖尺寸超過上限），改用WASM backend重試一次', err);
+        if(statusEl) statusEl.textContent = 'WebGL執行遇到問題，正在改用相容性較高的運算方式重試…';
+        await ensureTfWasmBackendLoaded();
+        await tf.setBackend('wasm');
+        await tf.ready();
+        return await runCartoonStylizeOnce(styleKey, srcCanvas, statusEl);
+      }
+      throw err;
+    }
   }
 
   function mmToPx(mm, dpi){ return Math.round(mm/25.4*dpi); }
@@ -874,7 +916,7 @@
   }
 
   // 日式似顏繪風格：以AI模型對裁切後的照片做風格轉換（在有限的工作解析度下運算，避免過大尺寸拖慢/耗盡瀏覽器資源），
-  // 套用主體遮罩後，再縮放到目標像素尺寸，回傳「尚未加上對位記號」的乾淨畫布
+  // 套用主體遮罩後，再縮放到目標像素尺寸，回傳「原始AI結果」（尚未套用風格強度/亮度/對比/飽和度後製、尚未加對位記號）
   async function computeAnimeStyleCanvas(wmm, hmm, targetW, targetH, workMaxPx, statusEl){
     const {w:workW, h:workH} = fitSize(wmm, hmm, workMaxPx);
     const srcCanvas = getCroppedCanvas(workW, workH);
@@ -885,6 +927,35 @@
     resized.width = targetW; resized.height = targetH;
     resized.getContext('2d').drawImage(styled, 0, 0, targetW, targetH);
     return resized;
+  }
+
+  // 對「原始AI結果」套用風格強度（與原照片混合的不透明度）、亮度／對比／飽和度後製調整。
+  // 這些調整都是輕量的canvas運算（非AI），因此滑桿拖曳時可即時重新套用，不必重新跑一次AI風格轉換
+  function applyAnimeAdjustments(rawCanvas, targetW, targetH){
+    const intensity = +document.getElementById('animeIntensityRange').value;
+    const brightness = +document.getElementById('animeBrightRange').value;
+    const contrast = +document.getElementById('animeContrastRange').value;
+    const saturation = +document.getElementById('animeSaturateRange').value;
+
+    const blended = document.createElement('canvas');
+    blended.width = targetW; blended.height = targetH;
+    const bctx = blended.getContext('2d');
+    if(intensity < 100){
+      // 強度<100%時，底下先貼原始裁切照片，AI風格化結果疊在上面用「不透明度=強度」混合
+      const originalCanvas = getCroppedCanvas(targetW, targetH);
+      bctx.drawImage(originalCanvas, 0, 0);
+    }
+    bctx.globalAlpha = Math.max(0, Math.min(100, intensity)) / 100;
+    bctx.drawImage(rawCanvas, 0, 0);
+    bctx.globalAlpha = 1;
+
+    if(brightness === 0 && contrast === 0 && saturation === 0) return blended;
+    const out = document.createElement('canvas');
+    out.width = targetW; out.height = targetH;
+    const octx = out.getContext('2d');
+    octx.filter = `brightness(${1+brightness/100}) contrast(${1+contrast/100}) saturate(${1+saturation/100})`;
+    octx.drawImage(blended, 0, 0);
+    return out;
   }
 
   function renderAnimeCanvas(resizedCanvas, wmm, hmm){
@@ -929,7 +1000,9 @@
       // 否則這一層會跟其他圖層尺寸不一致，疊合預覽時對不齊
       const statusEl = document.getElementById('animeStatus');
       const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_PREVIEW_MAX, statusEl);
-      return renderAnimeCanvas(resized, wmm, hmm);
+      animeRawCache = { canvas: resized, w, h }; // 快取原始AI結果，供風格強度/亮度/對比/飽和度滑桿即時調整、不必重新跑AI
+      const adjusted = applyAnimeAdjustments(resized, w, h);
+      return renderAnimeCanvas(adjusted, wmm, hmm);
     }
   }
 
@@ -950,11 +1023,12 @@
     } else {
       const statusEl = document.getElementById('animeStatus');
       const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_EXPORT_MAX, statusEl);
+      const adjusted = applyAnimeAdjustments(resized, w, h);
       const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'anime',
-        lineCanvas: renderAnimeCanvas(resized, wmm, hmm),
-        laserCanvas: renderAnimeLaserCanvas(resized, wmm, hmm, invert)
+        lineCanvas: renderAnimeCanvas(adjusted, wmm, hmm),
+        laserCanvas: renderAnimeLaserCanvas(adjusted, wmm, hmm, invert)
       };
     }
   }
@@ -1106,6 +1180,7 @@
 
   let lastPreviewLayers = null;
   let animePreviewGen = 0;
+  let animeRawCache = null; // 最近一次AI風格轉換的原始結果（未套用強度/亮度/對比/飽和度後製），供這些滑桿即時調整用
 
   // 日式似顏繪風格運算成本較高（AI推論），不隨裁切/縮放/尺寸調整等操作即時自動觸發，
   // 避免使用者還在調整①～③步驟時反覆跑AI拖慢瀏覽器；改由使用者按「產生／更新預覽」按鈕手動觸發（見 generateAnimePreviewNow）
@@ -1132,6 +1207,32 @@
     }
   }
   document.getElementById('animeGenerateBtn').addEventListener('click', generateAnimePreviewNow);
+
+  // 風格強度／亮度／對比／飽和度只是輕量後製，滑桿拖曳時直接重新套用在已快取的AI原始結果上即時更新畫面，
+  // 不會重新觸發AI推論（AI推論只由「產生／更新預覽」按鈕或裁切/尺寸/畫風改變後再按一次觸發）
+  function refreshAnimeAdjustmentsOnly(){
+    if(!animeRawCache || lineArtMode !== 'anime' || !lastPreviewLayers) return;
+    const {wmm,hmm} = currentPhysicalSize();
+    const {canvas, w, h} = animeRawCache;
+    const adjusted = applyAnimeAdjustments(canvas, w, h);
+    const lineCanvas = renderAnimeCanvas(adjusted, wmm, hmm);
+    drawInto('prevLine', lineCanvas);
+    lastPreviewLayers.lineCanvas = lineCanvas;
+    renderComposite();
+  }
+  const animeAdjustBindings = [
+    ['animeIntensityRange','animeIntensityVal', v=>v+'%'],
+    ['animeBrightRange','animeBrightVal', v=>v],
+    ['animeContrastRange','animeContrastVal', v=>v],
+    ['animeSaturateRange','animeSaturateVal', v=>v],
+  ];
+  animeAdjustBindings.forEach(([rangeId,labelId,fmt])=>{
+    const r = document.getElementById(rangeId);
+    r.addEventListener('input', ()=>{
+      document.getElementById(labelId).textContent = fmt(r.value);
+      refreshAnimeAdjustmentsOnly();
+    });
+  });
 
   function runPreview(){
     if(!img) return;
