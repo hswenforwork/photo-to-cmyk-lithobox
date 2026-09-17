@@ -177,7 +177,7 @@
         <input type="range" id="animeContrastRange" min="-100" max="100" value="0">
         <label>飽和度 <span class="value-pill" id="animeSaturateVal">0</span></label>
         <input type="range" id="animeSaturateRange" min="-100" max="100" value="0">
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽；若之後又調整了裁切、尺寸、遮罩或畫風，請重新按一次按鈕更新。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。下載/打包時會以較高解析度重新產生並套用當下的滑桿數值。（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽；若之後又調整了裁切、尺寸、遮罩或畫風，請重新按一次按鈕更新。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。<strong>下載/打包時會直接沿用這裡已經產生好的AI結果放大使用，不會重新觸發AI運算</strong>（也因此不需要為了印刷品質而另外用更高解析度重新跑一次AI，這在少數顯示卡/驅動上曾造成錯誤），並套用當下的滑桿數值；若尚未按過上方按鈕，下載時會自動先算一次。（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -281,7 +281,7 @@
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，每張圖層左上角會標示名稱、四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。雷射雕刻專用灰階PNG維持原始尺寸單獨下載，不參與A4排版。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，每張圖層左上角會標示名稱、四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。雷射雕刻專用灰階PNG維持原始尺寸單獨下載，不參與A4排版。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。若外層裝飾層使用日式似顏繪風格，下載/打包時會直接沿用④已經產生好的AI預覽結果放大使用（不會重新觸發AI運算，更快也更穩定）；若尚未產生過預覽，才會在下載時自動先算一次。</div>
     </section>
 
     <section class="panel">
@@ -334,8 +334,10 @@
   const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
   const A4_PORTRAIT_WMM = 210, A4_PORTRAIT_HMM = 297; // A4紙直向尺寸
   const A4_MARGIN_MM = 5; // A4紙下載列印圖層預留的列印邊界
-  const ANIME_PREVIEW_MAX = 320;  // 日式似顏繪風格即時預覽的AI運算工作解析度上限（越高越清晰但越慢）
-  const ANIME_EXPORT_MAX = 1024;  // 日式似顏繪風格下載/匯出的AI運算工作解析度上限，運算後再放大至實際列印像素尺寸
+  // 日式似顏繪風格AI運算固定使用這個工作解析度（預覽與下載/匯出都一樣），運算後再放大至實際輸出像素尺寸。
+  // 刻意讓預覽與匯出用「同一個」工作解析度，匯出時才能直接沿用預覽已經算好的結果、不必重新觸發AI，
+  // 也避免因為改用不同尺寸而讓WebGL重新編譯著色器（某些顯示卡/驅動在編譯特定尺寸的著色器時會失敗）
+  const ANIME_WORK_MAX = 320;
   const ANIME_MODEL_LOAD_TIMEOUT_MS = 60000;  // AI模型下載逾時上限
   const ANIME_STYLIZE_TIMEOUT_MS = 120000;    // 單次AI風格轉換運算逾時上限，避免瀏覽器/顯示卡當機時無限期卡住、沒有任何提示
   const SCRIPT_LOAD_TIMEOUT_MS = 30000;       // 動態載入.js/.wasm等執行檔的逾時上限
@@ -1022,10 +1024,10 @@
       return renderSketchCanvas(masked, w, h, wmm, hmm);
     } else {
       // 注意：目標尺寸必須用w,h（與同一批預覽的灰階/CMY/原始照片等圖層相同），
-      // AI運算才用較小的ANIME_PREVIEW_MAX當工作解析度（運算後再放大回w,h），
+      // AI運算才用較小的ANIME_WORK_MAX當工作解析度（運算後再放大回w,h），
       // 否則這一層會跟其他圖層尺寸不一致，疊合預覽時對不齊
       const statusEl = document.getElementById('animeStatus');
-      const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_PREVIEW_MAX, statusEl);
+      const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_WORK_MAX, statusEl);
       animeRawCache = { canvas: resized, w, h }; // 快取原始AI結果，供風格強度/亮度/對比/飽和度滑桿即時調整、不必重新跑AI
       const adjusted = applyAnimeAdjustments(resized, w, h);
       return renderAnimeCanvas(adjusted, wmm, hmm);
@@ -1048,8 +1050,23 @@
       };
     } else {
       const statusEl = document.getElementById('animeStatus');
-      const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_EXPORT_MAX, statusEl);
-      const adjusted = applyAnimeAdjustments(resized, w, h);
+      let rawForExport;
+      if(animeRawCache){
+        // 直接沿用「產生／更新預覽」按鈕已經算好的AI結果放大使用，不重新觸發AI推論：
+        // 1) 使用者已經看過這個結果、預覽也已經是最終效果，下載/打包理論上本來就只需要排版，不需要重算
+        // 2) 避免改用更大的匯出工作解析度重新呼叫AI——某些顯示卡/驅動程式在編譯不同尺寸的WebGL著色器時
+        //    會失敗（Failed to link vertex and fragment shaders），沿用同一份已經成功產生的結果可完全避開這個風險
+        if(statusEl) statusEl.textContent = '沿用已產生的日式似顏繪風格預覽結果，放大為匯出解析度…';
+        const cached = document.createElement('canvas');
+        cached.width = w; cached.height = h;
+        cached.getContext('2d').drawImage(animeRawCache.canvas, 0, 0, w, h);
+        rawForExport = cached;
+        if(statusEl) statusEl.textContent = '';
+      } else {
+        // 尚未按過「產生／更新預覽」，改在匯出時以跟預覽相同、較安全的工作解析度現算一次
+        rawForExport = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_WORK_MAX, statusEl);
+      }
+      const adjusted = applyAnimeAdjustments(rawForExport, w, h);
       const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'anime',
@@ -1566,7 +1583,7 @@
 
   document.getElementById('dlPrintPages').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
-    setStatus('處理中，請稍候…（完整解析度運算需要一點時間，日式似顏繪風格因為要跑AI模型會較久）');
+    setStatus('處理中，請稍候…（完整解析度運算需要一點時間；若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
     await new Promise(r=>setTimeout(r,30));
     try{
       const { pages } = await generatePrintPages(false, setStatus);
@@ -1585,7 +1602,7 @@
 
   document.getElementById('dlLineLaser').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
-    setStatus('處理中，請稍候…（完整解析度運算需要一點時間，日式似顏繪風格因為要跑AI模型會較久）');
+    setStatus('處理中，請稍候…（完整解析度運算需要一點時間；若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
     await new Promise(r=>setTimeout(r,30));
     // 若目前是日式似顏繪風格，把④區塊animeStatus的細部AI進度同步顯示在主要狀態列，避免看起來像卡住
     let mirrorTimer = null;
@@ -1621,7 +1638,7 @@
   document.getElementById('dlZip').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
     if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js），請確認 assets 資料夾已一併部署。'); return; }
-    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（日式似顏繪風格因為要跑AI模型會較久）');
+    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
     await new Promise(r=>setTimeout(r,30));
     try{
       const includeOther = document.getElementById('zipIncludeBoth').checked;
