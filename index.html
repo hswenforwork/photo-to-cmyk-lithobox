@@ -177,7 +177,7 @@
         <input type="range" id="animeContrastRange" min="-100" max="100" value="0">
         <label>飽和度 <span class="value-pill" id="animeSaturateVal">0</span></label>
         <input type="range" id="animeSaturateRange" min="-100" max="100" value="0">
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽；若之後又調整了裁切、尺寸、遮罩或畫風，請重新按一次按鈕更新。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。<strong>下載/打包時會直接沿用這裡已經產生好的AI結果放大使用，不會重新觸發AI運算</strong>（也因此不需要為了印刷品質而另外用更高解析度重新跑一次AI，這在少數顯示卡/驅動上曾造成錯誤），並套用當下的滑桿數值；若尚未按過上方按鈕，下載時會自動先算一次。（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。<strong>下載/打包時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下的滑桿數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -281,7 +281,7 @@
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，每張圖層左上角會標示名稱、四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。雷射雕刻專用灰階PNG維持原始尺寸單獨下載，不參與A4排版。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。若外層裝飾層使用日式似顏繪風格，下載/打包時會直接沿用④已經產生好的AI預覽結果放大使用（不會重新觸發AI運算，更快也更穩定）；若尚未產生過預覽，才會在下載時自動先算一次。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁；圖面本身不含任何文字標籤，四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。雷射雕刻專用灰階PNG維持原始尺寸單獨下載，不參與A4排版。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -410,26 +410,36 @@
   }
   const cartoonModelCache = {}; // styleKey -> tf.GraphModel（載入後快取，切換畫風不必重新下載）
   let tfBackendReadyPromise = null;
-  // 依序嘗試 WebGL（GPU加速，最快）→ WASM（CPU上的SIMD加速，多數裝置都夠快）→ 純JS CPU（相容性最好但非常慢，僅作最後手段），
-  // 避免讓tfjs內部的backend自動選擇邏輯，在某個backend初始化失敗時以未捕捉例外的方式中斷整個流程
+  // 統一切換並等待 TF backend：wasm 需要先確保本地backend檔案已載入；檢查 tf.setBackend() 的布林回傳值
+  // （啟用失敗時它不一定會拋例外，可能只回傳false），並統一加上逾時保護
+  async function activateTfBackend(name, timeoutMessage){
+    if(name === 'wasm') await ensureTfWasmBackendLoaded();
+    await withTimeout((async () => {
+      const activated = await tf.setBackend(name);
+      if(!activated) throw new Error(`${name} backend 無法啟用`);
+      await tf.ready();
+    })(), SCRIPT_LOAD_TIMEOUT_MS, timeoutMessage);
+  }
+  // 依序嘗試 WASM（CPU上的SIMD加速）→ WebGL（GPU加速，較快但需要編譯瀏覽器/顯示卡專屬shader）→ 純JS CPU（相容性最好但非常慢，僅作最後手段）。
+  // 優先使用WASM而非WebGL：WASM不需要編譯vertex/fragment shader，對不同公用電腦、顯示卡驅動與瀏覽器組合較穩定，
+  // 可避免「Failed to link vertex and fragment shaders」之類shader編譯失敗的問題；目前AI工作解析度固定只有
+  // ANIME_WORK_MAX=320px（見上方常數與其註解），WASM在這個尺寸下的運算成本是可接受的。
   function ensureTfBackendReady(){
     if(tfBackendReadyPromise) return tfBackendReadyPromise;
     tfBackendReadyPromise = (async () => {
+      try{
+        await activateTfBackend('wasm', 'WASM backend 初始化逾時');
+        return;
+      } catch(e){ console.warn('WASM backend 初始化失敗或逾時，改嘗試 WebGL backend', e); }
       if(!isLikelySoftwareWebGL()){
         try{
-          await withTimeout((async()=>{ await tf.setBackend('webgl'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WebGL backend 初始化逾時');
+          await activateTfBackend('webgl', 'WebGL backend 初始化逾時');
           return;
-        } catch(e){ console.warn('WebGL backend 初始化失敗或逾時，改嘗試 WASM backend', e); }
+        } catch(e){ console.warn('WebGL backend 初始化失敗或逾時，改用純JS CPU backend（運算速度會非常慢）', e); }
       } else {
-        console.warn('偵測到軟體模擬WebGL（無真實GPU加速），改優先使用 WASM backend');
+        console.warn('偵測到軟體模擬WebGL（無真實GPU加速），跳過WebGL改用純JS CPU backend');
       }
-      try{
-        await ensureTfWasmBackendLoaded();
-        await withTimeout((async()=>{ await tf.setBackend('wasm'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WASM backend 初始化逾時');
-        return;
-      } catch(e){ console.warn('WASM backend 初始化失敗或逾時，改用純JS CPU backend（運算速度會非常慢）', e); }
-      await tf.setBackend('cpu');
-      await tf.ready();
+      await activateTfBackend('cpu', 'CPU backend 初始化逾時');
     })();
     return tfBackendReadyPromise;
   }
@@ -476,10 +486,15 @@
     return out;
   }
 
+  // 判斷錯誤是否屬於可透過改用其他backend重試來恢復的類型：貼圖尺寸超限、WebGL一般錯誤、
+  // shader/vertex/fragment編譯或連結失敗（如「Failed to link vertex and fragment shaders.」）、逾時
+  function isRecoverableBackendError(msg){
+    return /texture size|webgl|shader|vertex|fragment|link(?:ed|ing)?\s+(?:a\s+)?program|program\s+link|逾時/i.test(msg || '');
+  }
   // 對來源canvas執行CartoonGAN風格轉換：
-  // 1) 加上逾時保護（見ANIME_STYLIZE_TIMEOUT_MS），避免WebGL顯示卡驅動卡住/當機時無限期停在「處理中」卻無任何錯誤訊息
-  // 2) 長時間使用WebGL backend後，偶爾會因內部貼圖管理累積而觸發「Requested texture size ... greater than WebGL
-  //    maximum」錯誤；或WebGL執行本身逾時（很可能是顯示卡驅動卡住）；兩種情況都自動改用WASM backend重試一次
+  // 1) 加上逾時保護（見ANIME_STYLIZE_TIMEOUT_MS），避免顯示卡驅動卡住/當機時無限期停在「處理中」卻無任何錯誤訊息
+  // 2) 遇到可恢復的錯誤（貼圖尺寸超限、WebGL錯誤、shader編譯/連結失敗、逾時）時，依序改用尚未嘗試過的其他
+  //    backend（wasm→webgl→cpu，跳過目前已在用的與偵測為軟體模擬的WebGL）各重試一次，全部失敗才顯示最終錯誤
   async function runCartoonStylize(styleKey, srcCanvas, statusEl){
     const attempt = () => withTimeout(
       runCartoonStylizeOnce(styleKey, srcCanvas, statusEl),
@@ -489,20 +504,22 @@
     try{
       return await attempt();
     } catch(err){
-      const msg = (err && err.message) || '';
-      const isRecoverable = /texture size|webgl|逾時/i.test(msg);
-      if(isRecoverable && tf.getBackend() === 'webgl'){
-        console.warn('WebGL執行失敗或逾時，改用WASM backend重試一次', err);
-        if(statusEl) statusEl.textContent = 'WebGL執行遇到問題，正在改用相容性較高的運算方式重試…';
-        await ensureTfWasmBackendLoaded();
-        await withTimeout((async()=>{ await tf.setBackend('wasm'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WASM backend 初始化逾時');
+      if(!isRecoverableBackendError((err && err.message) || '')) throw err;
+      let lastErr = err;
+      const tried = new Set([tf.getBackend()]);
+      const fallbackOrder = ['wasm','webgl','cpu'].filter(b => !tried.has(b) && !(b === 'webgl' && isLikelySoftwareWebGL()));
+      for(const backend of fallbackOrder){
+        console.warn(`AI風格轉換遇到問題（${(lastErr && lastErr.message) || lastErr}），改用 ${backend} backend 重試一次`, lastErr);
+        if(statusEl) statusEl.textContent = '目前的運算方式遇到問題，正在改用相容性較高的運算方式重試…';
         try{
+          await activateTfBackend(backend, `${backend} backend 初始化逾時`);
           return await attempt();
         } catch(err2){
-          throw new Error((err2 && err2.message ? err2.message : String(err2)) + '（已嘗試改用WASM重試仍失敗，建議重新整理頁面後再試一次，或改用素描風模式）');
+          lastErr = err2;
+          if(!isRecoverableBackendError((err2 && err2.message) || '')) throw err2;
         }
       }
-      throw err;
+      throw new Error((lastErr && lastErr.message ? lastErr.message : String(lastErr)) + '（已嘗試改用其他運算方式重試仍失敗，建議重新整理頁面後再試一次，或改用素描風模式）');
     }
   }
 
@@ -564,15 +581,16 @@
       drawCropper();
       const mctx = maskCanvas.getContext('2d');
       mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
+      resetAnimePreviewCache(); // 新照片，先前產生的日式似顏繪風格快取完全不適用了
       scheduleUpdate();
       document.getElementById('dlZip').disabled = false;
     };
     image.src = url;
   }
 
-  document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
-  document.getElementById('orientSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
-  document.getElementById('mirrorFlip').addEventListener('change', ()=>{ drawCropper(); scheduleUpdate(); });
+  document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
+  document.getElementById('orientSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
+  document.getElementById('mirrorFlip').addEventListener('change', ()=>{ drawCropper(); markAnimePreviewStale(); scheduleUpdate(); });
 
   function updateDimHint(){
     const {w,h,wmm,hmm} = fullPixelSize();
@@ -683,9 +701,10 @@
   });
   document.getElementById('maskClear').addEventListener('click', ()=>{
     maskCanvas.getContext('2d').clearRect(0,0,maskCanvas.width,maskCanvas.height);
+    markAnimePreviewStale();
     scheduleUpdate();
   });
-  document.getElementById('maskEnable').addEventListener('change', scheduleUpdate);
+  document.getElementById('maskEnable').addEventListener('change', ()=>{ markAnimePreviewStale(); scheduleUpdate(); });
 
   // ---------- 外層裝飾層模式：日式似顏繪風格（AI圖像風格轉換） / 素描風（鉛筆筆觸） ----------
   let lineArtMode = 'anime';
@@ -704,7 +723,7 @@
       scheduleUpdate();
     });
   });
-  document.getElementById('animeStyleSelect').addEventListener('change', scheduleUpdate);
+  document.getElementById('animeStyleSelect').addEventListener('change', ()=>{ markAnimePreviewStale(); scheduleUpdate(); });
 
   cropWrap.addEventListener('pointerdown', e=>{
     if(!img) return;
@@ -715,6 +734,7 @@
     } else {
       const {x,y} = maskPointFromEvent(e);
       paintMaskAt(x,y, interactionMode==='erase');
+      markAnimePreviewStale();
       scheduleUpdate();
     }
   });
@@ -727,10 +747,12 @@
       crop.offY = dragStart.offY + dy*scaleFactor;
       clampCrop();
       drawCropper();
+      markAnimePreviewStale();
       scheduleUpdate();
     } else {
       const {x,y} = maskPointFromEvent(e);
       paintMaskAt(x,y, interactionMode==='erase');
+      markAnimePreviewStale();
       scheduleUpdate();
     }
   });
@@ -744,6 +766,7 @@
     document.getElementById('zoomVal').textContent = e.target.value+'%';
     clampCrop();
     drawCropper();
+    markAnimePreviewStale();
     scheduleUpdate();
   });
 
@@ -974,7 +997,7 @@
       bctx.drawImage(originalCanvas, 0, 0);
     }
     bctx.globalAlpha = Math.max(0, Math.min(100, intensity)) / 100;
-    bctx.drawImage(rawCanvas, 0, 0);
+    bctx.drawImage(rawCanvas, 0, 0, targetW, targetH); // 明確指定目的寬高：來源canvas尺寸可能與目的不同，省略會只貼在左上角一小塊
     bctx.globalAlpha = 1;
 
     if(brightness === 0 && contrast === 0 && saturation === 0) return blended;
@@ -1027,8 +1050,15 @@
       // AI運算才用較小的ANIME_WORK_MAX當工作解析度（運算後再放大回w,h），
       // 否則這一層會跟其他圖層尺寸不一致，疊合預覽時對不齊
       const statusEl = document.getElementById('animeStatus');
+      const styleKey = document.getElementById('animeStyleSelect').value;
+      const sourceRevision = animeSourceRevision; // AI運算前先記錄版本，運算期間若被更動，結果就視為過期
       const resized = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_WORK_MAX, statusEl);
-      animeRawCache = { canvas: resized, w, h }; // 快取原始AI結果，供風格強度/亮度/對比/飽和度滑桿即時調整、不必重新跑AI
+      if(sourceRevision !== animeSourceRevision){
+        // 運算期間使用者又變更了照片/裁切/尺寸/方向/鏡像/遮罩/畫風等輸入，這次結果已經過期：
+        // 不寫入快取、也不顯示，避免快取到跟不上目前畫面設定的AI輸出
+        return null;
+      }
+      animeRawCache = { canvas: resized, w, h, revision: sourceRevision, styleKey }; // 快取原始AI結果，供風格強度/亮度/對比/飽和度滑桿即時調整、下載/匯出重用
       const adjusted = applyAnimeAdjustments(resized, w, h);
       return renderAnimeCanvas(adjusted, wmm, hmm);
     }
@@ -1049,24 +1079,17 @@
         laserCanvas: renderSketchLaserCanvas(masked, w, h, wmm, hmm, invert)
       };
     } else {
-      const statusEl = document.getElementById('animeStatus');
-      let rawForExport;
-      if(animeRawCache){
-        // 直接沿用「產生／更新預覽」按鈕已經算好的AI結果放大使用，不重新觸發AI推論：
-        // 1) 使用者已經看過這個結果、預覽也已經是最終效果，下載/打包理論上本來就只需要排版，不需要重算
-        // 2) 避免改用更大的匯出工作解析度重新呼叫AI——某些顯示卡/驅動程式在編譯不同尺寸的WebGL著色器時
-        //    會失敗（Failed to link vertex and fragment shaders），沿用同一份已經成功產生的結果可完全避開這個風險
-        if(statusEl) statusEl.textContent = '沿用已產生的日式似顏繪風格預覽結果，放大為匯出解析度…';
-        const cached = document.createElement('canvas');
-        cached.width = w; cached.height = h;
-        cached.getContext('2d').drawImage(animeRawCache.canvas, 0, 0, w, h);
-        rawForExport = cached;
-        if(statusEl) statusEl.textContent = '';
-      } else {
-        // 尚未按過「產生／更新預覽」，改在匯出時以跟預覽相同、較安全的工作解析度現算一次
-        rawForExport = await computeAnimeStyleCanvas(wmm, hmm, w, h, ANIME_WORK_MAX, statusEl);
-      }
-      const adjusted = applyAnimeAdjustments(rawForExport, w, h);
+      // 下載/匯出永遠不會重新呼叫AI：只直接沿用「產生／更新預覽」按鈕已經算好、且仍對應目前設定的快取結果放大使用。
+      // 沒有快取或快取已過期（見 animeSourceRevision／animeCacheReadyFor）就直接拒絕，而不是靜默重跑AI——
+      // 這樣才能徹底避免下載時第二次觸發AI推論可能造成的shader編譯失敗（Failed to link vertex and fragment
+      // shaders），也確保下載內容與使用者已經確認過的預覽完全一致。呼叫端（各下載按鈕）應在開始耗時的排版
+      // 工作前，先用 animeCacheReadyFor() 檢查過一次；這裡是第二層防護。
+      const ready = animeCacheReadyFor('anime');
+      if(!ready.ok) throw new Error(ready.reason);
+      const cached = document.createElement('canvas');
+      cached.width = w; cached.height = h;
+      cached.getContext('2d').drawImage(animeRawCache.canvas, 0, 0, w, h);
+      const adjusted = applyAnimeAdjustments(cached, w, h);
       const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'anime',
@@ -1203,6 +1226,7 @@
       mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
       mctx.drawImage(maskTmp,0,0,maskCanvas.width,maskCanvas.height);
       document.getElementById('maskEnable').checked = true;
+      markAnimePreviewStale();
       scheduleUpdate();
       statusEl.textContent = 'AI主體偵測完成，可再用「標記主體／擦除」筆刷手動微調邊緣。';
     } catch(err){
@@ -1223,7 +1247,37 @@
 
   let lastPreviewLayers = null;
   let animePreviewGen = 0;
-  let animeRawCache = null; // 最近一次AI風格轉換的原始結果（未套用強度/亮度/對比/飽和度後製），供這些滑桿即時調整用
+  // 最近一次AI風格轉換的原始結果（未套用強度/亮度/對比/飽和度後製），供這些滑桿即時調整、下載/匯出重用；
+  // 額外記錄產生當下的 revision 與畫風，用來判斷快取是否已經過期（見 animeSourceRevision）
+  let animeRawCache = null;
+
+  // 會改變AI輸入內容的操作（照片、裁切位置/縮放、輸出尺寸/方向、水平鏡像、主體遮罩、畫風）都會讓
+  // animeRawCache 過期：每次這類操作發生時呼叫 markAnimePreviewStale() 讓版本編號+1，
+  // animeRawCache.revision 與目前版本不一致就代表快取已經跟不上目前畫面設定，不可再用於下載/匯出
+  let animeSourceRevision = 0;
+  function markAnimePreviewStale(){
+    animeSourceRevision++;
+  }
+  // 上傳新照片時使用：徹底清空快取，並讓任何仍在背景執行中的AI推論完成後也不會寫入已經失效的結果
+  function resetAnimePreviewCache(){
+    animeRawCache = null;
+    animePreviewGen++;
+    markAnimePreviewStale();
+    const statusEl = document.getElementById('animeStatus');
+    if(statusEl) statusEl.textContent = '';
+  }
+  // 檢查是否可以直接沿用animeRawCache進行下載/匯出（mode不是'anime'時一律視為不需要檢查，直接放行）
+  function animeCacheReadyFor(mode){
+    if(mode !== 'anime') return { ok:true };
+    if(!animeRawCache){
+      return { ok:false, reason:'尚未產生日式似顏繪風格預覽。請先按「產生／更新日式似顏繪風格預覽」，確認畫面後再下載。' };
+    }
+    const styleKey = document.getElementById('animeStyleSelect').value;
+    if(animeRawCache.revision !== animeSourceRevision || animeRawCache.styleKey !== styleKey){
+      return { ok:false, reason:'日式似顏繪風格預覽已過期（照片、裁切、尺寸、方向、鏡像、遮罩或畫風曾被變更），請先按「產生／更新日式似顏繪風格預覽」更新後再下載。' };
+    }
+    return { ok:true };
+  }
 
   // 日式似顏繪風格運算成本較高（AI推論），不隨裁切/縮放/尺寸調整等操作即時自動觸發，
   // 避免使用者還在調整①～③步驟時反覆跑AI拖慢瀏覽器；改由使用者按「產生／更新預覽」按鈕手動觸發（見 generateAnimePreviewNow）
@@ -1237,7 +1291,8 @@
     if(btn) btn.disabled = true;
     try{
       const lineCanvas = await computeLineArtPreviewCanvas(grayRaw, w, h, wmm, hmm);
-      if(myGen !== animePreviewGen || !lastPreviewLayers) return;
+      // lineCanvas為null代表運算期間輸入又被變更，結果已經過期而被捨棄（見computeLineArtPreviewCanvas）
+      if(myGen !== animePreviewGen || !lastPreviewLayers || !lineCanvas) return;
       drawInto('prevLine', lineCanvas);
       lastPreviewLayers.lineCanvas = lineCanvas;
       renderComposite();
@@ -1467,8 +1522,9 @@
     return c;
   }
 
-  // 把單一圖層畫入頁面canvas的指定網格位置，附上裁切虛線框與左上角名稱標籤
-  function drawItemOntoPage(pageCanvas, itemCanvas, label, wmm, hmm, xmm, ymm){
+  // 把單一圖層畫入頁面canvas的指定網格位置，只附上裁切用的虛線框（不畫任何文字標籤，
+  // 各圖層本身已經有四角十字線／打孔圓點對位記號，足以辨識與對位裁切）
+  function drawItemOntoPage(pageCanvas, itemCanvas, wmm, hmm, xmm, ymm){
     const ctx = pageCanvas.getContext('2d');
     const x = mmToPx(xmm, DPI), y = mmToPx(ymm, DPI);
     const w = mmToPx(wmm, DPI), h = mmToPx(hmm, DPI);
@@ -1478,17 +1534,6 @@
     ctx.lineWidth = Math.max(1, mmToPx(0.2, DPI));
     ctx.setLineDash([mmToPx(2,DPI), mmToPx(2,DPI)]);
     ctx.strokeRect(x, y, w, h);
-    ctx.restore();
-    ctx.save();
-    const fontPx = mmToPx(3.2, DPI);
-    ctx.font = `bold ${fontPx}px sans-serif`;
-    const textW = ctx.measureText(label).width;
-    const padX = mmToPx(1.2, DPI), padY = mmToPx(0.8, DPI);
-    ctx.fillStyle = 'rgba(20,22,26,0.78)';
-    ctx.fillRect(x, y, textW + padX*2, fontPx + padY*2);
-    ctx.fillStyle = '#fff';
-    ctx.textBaseline = 'top';
-    ctx.fillText(label, x + padX, y + padY);
     ctx.restore();
   }
 
@@ -1533,34 +1578,20 @@
     }
     startNewPage();
 
+    // 注意：這個迴圈不會執行任何AI運算——日式似顏繪風格圖層（若有）一律直接沿用已產生的預覽快取
+    // （見computeLineArtFull），所以這裡不需要像先前版本那樣定期把④區塊animeStatus的AI進度鏡像到
+    // 主要狀態列；每個工作本身都是快速的canvas排版/繪圖運算
     for(let i=0;i<jobs.length;i++){
       const jobLabel = jobs[i].label;
-      const baseMsg = `處理中（${i+1}/${jobs.length}）：${jobLabel}`;
-      if(statusCb) statusCb(baseMsg + '…');
+      if(statusCb) statusCb(`處理中（${i+1}/${jobs.length}）：${jobLabel}…`);
       await new Promise(r=>setTimeout(r,0)); // 讓出主執行緒，讓狀態文字先畫出來
 
-      // 若這個工作是日式似顏繪風格（AI運算，耗時較久），把④區塊animeStatus的細部進度
-      // 也定期同步顯示在這裡的主要狀態列，讓使用者不用切換畫面也能看到目前AI實際在做什麼，
-      // 避免長時間沒有變化而誤以為畫面卡住
-      let mirrorTimer = null;
-      if(statusCb && jobLabel.indexOf('日式似顏繪') !== -1){
-        const animeStatusEl = document.getElementById('animeStatus');
-        mirrorTimer = setInterval(()=>{
-          const sub = animeStatusEl ? animeStatusEl.textContent : '';
-          statusCb(sub ? `${baseMsg} — ${sub}` : baseMsg + '…');
-        }, 400);
-      }
-      let layerCanvas;
-      try{
-        layerCanvas = await jobs[i].make();
-      } finally {
-        if(mirrorTimer) clearInterval(mirrorTimer);
-      }
+      const layerCanvas = await jobs[i].make();
 
       if(idxOnPage >= grid.perPage){ pages.push(curPage); startNewPage(); }
       const col = idxOnPage % grid.cols, row = Math.floor(idxOnPage / grid.cols);
       const xmm = grid.offXmm + col*wmm, ymm = grid.offYmm + row*hmm;
-      drawItemOntoPage(curPage, layerCanvas, jobs[i].label, wmm, hmm, xmm, ymm);
+      drawItemOntoPage(curPage, layerCanvas, wmm, hmm, xmm, ymm);
       idxOnPage++;
       layerCanvas.width = 0; layerCanvas.height = 0; // 盡快釋放來源圖層canvas佔用的記憶體
     }
@@ -1583,7 +1614,11 @@
 
   document.getElementById('dlPrintPages').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
-    setStatus('處理中，請稍候…（完整解析度運算需要一點時間；若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
+    // 開始耗時的排版工作前，先確認日式似顏繪風格快取存在且未過期：下載/匯出不會重新執行AI，
+    // 沒有可用快取就直接提示使用者，而不是先跑完其他圖層才失敗
+    const ready = animeCacheReadyFor(lineArtMode);
+    if(!ready.ok){ setStatus(ready.reason); return; }
+    setStatus('處理中，請稍候…（使用已產生的圖層進行排版／輸出，完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
     try{
       const { pages } = await generatePrintPages(false, setStatus);
@@ -1602,17 +1637,10 @@
 
   document.getElementById('dlLineLaser').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
-    setStatus('處理中，請稍候…（完整解析度運算需要一點時間；若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
+    const ready = animeCacheReadyFor(lineArtMode);
+    if(!ready.ok){ setStatus(ready.reason); return; }
+    setStatus('處理中，請稍候…（使用已產生的圖層進行輸出，完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
-    // 若目前是日式似顏繪風格，把④區塊animeStatus的細部AI進度同步顯示在主要狀態列，避免看起來像卡住
-    let mirrorTimer = null;
-    if(lineArtMode === 'anime'){
-      const animeStatusEl = document.getElementById('animeStatus');
-      mirrorTimer = setInterval(()=>{
-        const sub = animeStatusEl ? animeStatusEl.textContent : '';
-        if(sub) setStatus(`處理中：${sub}`);
-      }, 400);
-    }
     try{
       const {w,h,wmm,hmm} = fullPixelSize();
       const srcCanvas = getCroppedCanvas(w,h);
@@ -1625,8 +1653,6 @@
     } catch(err){
       setStatus('產生雷射雕刻檔案失敗：'+err.message);
       console.error(err);
-    } finally {
-      if(mirrorTimer) clearInterval(mirrorTimer);
     }
   });
 
@@ -1638,10 +1664,17 @@
   document.getElementById('dlZip').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
     if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js），請確認 assets 資料夾已一併部署。'); return; }
-    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（若尚未產生過日式似顏繪風格預覽，這裡會多花一點時間先跑一次AI）');
+    const includeOther = document.getElementById('zipIncludeBoth').checked;
+    const otherMode = lineArtMode === 'sketch' ? 'anime' : 'sketch';
+    const readyPrimary = animeCacheReadyFor(lineArtMode);
+    if(!readyPrimary.ok){ setStatus(readyPrimary.reason); return; }
+    if(includeOther){
+      const readySecondary = animeCacheReadyFor(otherMode);
+      if(!readySecondary.ok){ setStatus(readySecondary.reason); return; }
+    }
+    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（使用已產生的圖層進行排版／輸出／打包）');
     await new Promise(r=>setTimeout(r,30));
     try{
-      const includeOther = document.getElementById('zipIncludeBoth').checked;
       const { pages, primary, secondary, wmm, hmm, w, h } = await generatePrintPages(includeOther, setStatus);
 
       const files = {};
@@ -1662,7 +1695,7 @@
 實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
 
 檔案：
-- print-page-N.png：已自動排版於A4紙（210×297mm，600dpi）的列印頁面，同一張A4紙會依實際輸出尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層左上角有名稱標籤，四角皆有「十字線＋打孔圓點」同心對位記號，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。
+- print-page-N.png：已自動排版於A4紙（210×297mm，600dpi）的列印頁面，同一張A4紙會依實際輸出尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；圖面本身不含任何文字標籤，四角皆有「十字線＋打孔圓點」同心對位記號，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。
 - lineart-anime-laser.png：日式似顏繪風格的雷射雕刻專用灰階點陣（亮度轉換，深色=雕更深，如與您軟體慣例相反請在下載前勾選反轉），維持原始輸出尺寸，不參與A4排版，供直接匯入雷射雕刻軟體使用。
 - lineart-sketch-laser.png：素描風的雷射雕刻專用灰階點陣，同上說明。
 
