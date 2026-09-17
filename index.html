@@ -150,11 +150,28 @@
 
     <section class="panel">
       <h2>④ 參數調整</h2>
-      <h3>線稿（邊緣偵測）</h3>
-      <label>靈敏度 <span class="value-pill" id="edgeVal">50</span></label>
-      <input type="range" id="edgeRange" min="1" max="100" value="50">
-      <label>去雜訊模糊（線稿更乾淨、減少雜點） <span class="value-pill" id="denoiseVal">1px</span></label>
-      <input type="range" id="denoiseRange" min="0" max="5" value="1">
+      <h3>線稿風格</h3>
+      <div class="tabs" id="lineModeTabs">
+        <div class="tab active" data-linemode="simple">簡單線稿（邊緣偵測）</div>
+        <div class="tab" data-linemode="sketch">素描風（鉛筆筆觸）</div>
+      </div>
+
+      <div id="simpleLineControls">
+        <label>靈敏度 <span class="value-pill" id="edgeVal">50</span></label>
+        <input type="range" id="edgeRange" min="1" max="100" value="50">
+        <label>去雜訊模糊（線稿更乾淨、減少雜點） <span class="value-pill" id="denoiseVal">1px</span></label>
+        <input type="range" id="denoiseRange" min="0" max="5" value="1">
+      </div>
+
+      <div id="sketchLineControls" class="hidden">
+        <label>明暗強度（陰影柔和度） <span class="value-pill" id="sketchShadeVal">50</span></label>
+        <input type="range" id="sketchShadeRange" min="1" max="100" value="50">
+        <label>排線密度 <span class="value-pill" id="sketchHatchVal">50</span></label>
+        <input type="range" id="sketchHatchRange" min="1" max="100" value="50">
+        <label>筆觸深淺 <span class="value-pill" id="sketchStrengthVal">60</span></label>
+        <input type="range" id="sketchStrengthRange" min="0" max="100" value="60">
+        <div class="note">素描風效果為第一階段的程式化濾鏡（非AI模型）：以「負片＋模糊＋加亮混合」模擬明暗骨架，再疊加固定角度交叉排線模擬筆觸紋理，效果會依上方主體遮罩只套用在主體範圍內。</div>
+      </div>
 
       <h3>灰階高度圖（3D列印用）</h3>
       <label>亮度 <span class="value-pill" id="brightVal">0</span></label>
@@ -184,7 +201,7 @@
         </div>
         <div class="layerCard">
           <canvas id="prevLine"></canvas>
-          <div class="cap">線稿（熄燈裝飾層）</div>
+          <div class="cap" id="prevLineCap">簡單線稿（熄燈裝飾層）</div>
         </div>
         <div class="layerCard">
           <canvas id="prevC"></canvas>
@@ -216,24 +233,21 @@
           </select>
         </div>
         <div>
-          <label>散射模糊 <span class="value-pill" id="blurVal">3px</span></label>
-          <input type="range" id="blurRange" min="0" max="20" value="3">
+          <label>整體穿透衰減 <span class="value-pill" id="attenVal">25%</span></label>
+          <input type="range" id="attenRange" min="0" max="80" value="25">
         </div>
       </div>
       <div class="row">
         <div>
-          <label>整體穿透衰減 <span class="value-pill" id="attenVal">25%</span></label>
-          <input type="range" id="attenRange" min="0" max="80" value="25">
-        </div>
-        <div>
           <label>邊緣暗角 <span class="value-pill" id="vignetteVal">30%</span></label>
           <input type="range" id="vignetteRange" min="0" max="100" value="30">
         </div>
+        <div></div>
       </div>
       <div class="compositeCanvasWrap">
         <canvas id="compositeCanvas"></canvas>
       </div>
-      <div class="note">「熄燈」模擬燈箱最外層線稿在環境光下的樣子；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層線稿，並加上背光色溫、散射模糊、整體衰減與邊緣暗角，模擬實際LED背光穿透多層材料後偏柔和、偏暗的觀感。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
+      <div class="note">「熄燈」模擬燈箱最外層線稿在環境光下的樣子（會跟著下方④選的線稿風格切換）；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層線稿，並加上背光色溫、整體衰減與邊緣暗角，模擬實際LED背光穿透多層材料後偏柔和、偏暗的觀感。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
     </section>
 
     <section class="panel">
@@ -242,13 +256,16 @@
         <button class="btn" id="dlGrayPng">灰階高度圖 PNG</button>
         <button class="btn" id="dlLinePng">線稿 PNG</button>
         <button class="btn" id="dlLineSvg">線稿 SVG（雷射雕刻用）</button>
+        <button class="btn hidden" id="dlLineLaser">線稿 雷射雕刻灰階PNG</button>
         <button class="btn" id="dlCPng">Cyan 版 PNG</button>
         <button class="btn" id="dlMPng">Magenta 版 PNG</button>
         <button class="btn" id="dlYPng">Yellow 版 PNG</button>
       </div>
+      <label class="hidden" id="laserInvertWrap" style="margin-top:8px;"><input type="checkbox" id="laserInvert" style="width:auto; display:inline-block; margin-right:6px;">雷射雕刻灰階PNG反轉黑白（依您雷射雕刻軟體的深淺慣例調整，多數軟體「深色=雕更深」）</label>
+      <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種線稿模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">所有列印用圖層（線稿PNG / C / M / Y）皆已依所選尺寸輸出為 600dpi 全解析度，並在四角加上「十字線＋打孔圓點同心對位記號」，方便疊合列印後裁切、打孔對位。線稿 SVG 已依實際物理尺寸（mm）建立座標，可直接匯入雷射雕刻軟體使用。</div>
+      <div class="note">所有列印用圖層皆已依所選尺寸輸出為 600dpi 全解析度，並在四角加上「十字線＋打孔圓點同心對位記號」，方便疊合列印後裁切、打孔對位。簡單線稿模式的 SVG 已依實際物理尺寸（mm）建立座標，可直接匯入雷射雕刻軟體使用；素描風模式因為是連續灰階筆觸效果，改為提供「雷射雕刻專用灰階PNG」，多數支援灰階深度雕刻的雷射雕刻軟體可直接讀取（深色=雕更深），如與您的軟體慣例相反可勾選反轉。</div>
     </section>
 
     <section class="panel">
@@ -470,6 +487,32 @@
   });
   document.getElementById('maskEnable').addEventListener('change', scheduleUpdate);
 
+  // ---------- 線稿風格模式：簡單線稿（邊緣偵測） / 素描風（鉛筆筆觸） ----------
+  let lineArtMode = 'simple';
+  function updatePrevLineCap(){
+    document.getElementById('prevLineCap').textContent =
+      lineArtMode === 'sketch' ? '素描風線稿（熄燈裝飾層）' : '簡單線稿（熄燈裝飾層）';
+  }
+  function updateLineArtDownloadUI(){
+    const sketch = lineArtMode === 'sketch';
+    document.getElementById('dlLineSvg').classList.toggle('hidden', sketch);
+    document.getElementById('dlLineLaser').classList.toggle('hidden', !sketch);
+    document.getElementById('laserInvertWrap').classList.toggle('hidden', !sketch);
+  }
+  document.querySelectorAll('#lineModeTabs .tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('#lineModeTabs .tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      lineArtMode = tab.dataset.linemode;
+      document.getElementById('simpleLineControls').classList.toggle('hidden', lineArtMode!=='simple');
+      document.getElementById('sketchLineControls').classList.toggle('hidden', lineArtMode!=='sketch');
+      updatePrevLineCap();
+      updateLineArtDownloadUI();
+      scheduleUpdate();
+    });
+  });
+  updateLineArtDownloadUI();
+
   cropWrap.addEventListener('pointerdown', e=>{
     if(!img) return;
     dragging = true;
@@ -646,6 +689,145 @@
     const mask = getMaskSample(w,h);
     for(let i=0;i<bin.length;i++){ if(!mask[i]) bin[i] = 0; }
     return bin;
+  }
+
+  // 同上，但用於連續灰階資料（素描風）：遮罩外的區域填成指定背景值（白紙=255）
+  function applyMaskToGray(grayArr, w, h, backgroundValue){
+    if(!document.getElementById('maskEnable').checked) return grayArr;
+    const mask = getMaskSample(w,h);
+    const out = new Float32Array(grayArr.length);
+    for(let i=0;i<grayArr.length;i++){ out[i] = mask[i] ? grayArr[i] : backgroundValue; }
+    return out;
+  }
+
+  // ---------- 素描風線稿（第一階段：純Canvas程式化濾鏡，非AI模型） ----------
+  // 經典鉛筆素描技法：原圖負片做模糊，再與原圖做「加亮（color dodge）」混合，做出明暗骨架
+  function pencilSketchDodge(grayRaw, w, h, blurRadius){
+    const inv = new Float32Array(w*h);
+    for(let i=0;i<w*h;i++) inv[i] = 255 - grayRaw[i];
+    const blurred = boxBlur(inv, w, h, Math.max(1, blurRadius));
+    const out = new Float32Array(w*h);
+    for(let i=0;i<w*h;i++){
+      const base = grayRaw[i];
+      const blend = blurred[i];
+      let v;
+      if(blend >= 254.5) v = 255;
+      else v = (base*255) / (255-blend);
+      out[i] = Math.max(0, Math.min(255, v));
+    }
+    return out;
+  }
+
+  // 依局部明暗疊加固定角度（45°/135°）交叉排線，模擬鉛筆筆觸紋理：越暗的區域排線越密、甚至雙向交叉
+  function applyCrossHatch(sketchGray, w, h, spacing, strengthPct){
+    const out = new Float32Array(sketchGray);
+    const strengthF = strengthPct/100;
+    const lineWidth = Math.max(1, Math.round(spacing*0.28));
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const idx = y*w+x;
+        const v = sketchGray[idx];
+        const darkness = 1 - v/255; // 0=亮,1=暗
+        if(darkness <= 0.05) continue; // 接近白色（含遮罩外背景）保持乾淨，不加排線
+        const d1 = ((x+y) % spacing + spacing) % spacing;
+        const d2 = ((x-y) % spacing + spacing) % spacing;
+        let hatchOn = false;
+        if(darkness > 0.15 && d1 < lineWidth) hatchOn = true;
+        if(darkness > 0.45 && d2 < lineWidth) hatchOn = true;
+        if(hatchOn){
+          out[idx] = Math.max(0, v - strengthF*140);
+        }
+      }
+    }
+    return out;
+  }
+
+  // 素描風主流程：明暗骨架 + 排線紋理，spacing/blur半徑依畫布尺寸等比例換算，確保不同輸出尺寸(A5/6x4/7x5)排線密度視覺一致
+  function computeSketchGray(grayRaw, w, h, shadeStrength, hatchDensity, hatchStrengthPct){
+    const blurRadius = Math.max(1, Math.round((shadeStrength/100) * Math.min(w,h) * 0.05));
+    const base = pencilSketchDodge(grayRaw, w, h, blurRadius);
+    const spacing = Math.max(2, Math.round(Math.min(w,h) * 0.02 * (1 - hatchDensity/130) + 2));
+    return applyCrossHatch(base, w, h, spacing, hatchStrengthPct);
+  }
+
+  function renderSketchCanvas(sketchGray, w, h, markColor){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    for(let i=0;i<sketchGray.length;i++){
+      const v = Math.max(0, Math.min(255, sketchGray[i]));
+      id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+    drawAlignmentMarks(ctx,w,h, markColor || 'rgba(150,70,255,0.85)');
+    return c;
+  }
+
+  // 雷射雕刻專用灰階點陣：與一般PNG同一份濃淡資料，但對位記號改用純黑（避免彩色標記干擾雷射軟體判讀灰階深度），並可選反轉黑白
+  function renderSketchLaserCanvas(sketchGray, w, h, invert){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    const id = ctx.createImageData(w,h);
+    for(let i=0;i<sketchGray.length;i++){
+      let v = Math.max(0, Math.min(255, sketchGray[i]));
+      if(invert) v = 255-v;
+      id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
+    }
+    ctx.putImageData(id,0,0);
+    drawAlignmentMarks(ctx,w,h,'rgba(0,0,0,0.9)');
+    return c;
+  }
+
+  // 依目前選中的線稿模式，計算「熄燈裝飾層」的預覽用canvas（低解析度，供即時預覽/合成預覽使用）
+  function computeLineArtPreviewCanvas(grayRaw, w, h){
+    if(lineArtMode === 'sketch'){
+      const shade = +document.getElementById('sketchShadeRange').value;
+      const hatch = +document.getElementById('sketchHatchRange').value;
+      const strength = +document.getElementById('sketchStrengthRange').value;
+      const sketchGray = computeSketchGray(grayRaw, w, h, shade, hatch, strength);
+      const masked = applyMaskToGray(sketchGray, w, h, 255);
+      return renderSketchCanvas(masked, w, h);
+    } else {
+      const edgeSens = +document.getElementById('edgeRange').value;
+      const denoise = +document.getElementById('denoiseRange').value;
+      let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+      bin = applyMaskToBin(bin, w, h);
+      return renderLineCanvas(bin, w, h);
+    }
+  }
+
+  // 依指定模式（可能與目前UI選中的不同，供ZIP「同時包含另一模式」使用）計算完整解析度的線稿輸出組合
+  function computeLineArtFull(mode, grayRaw, w, h, wmm, hmm){
+    if(mode === 'sketch'){
+      const shade = +document.getElementById('sketchShadeRange').value;
+      const hatch = +document.getElementById('sketchHatchRange').value;
+      const strength = +document.getElementById('sketchStrengthRange').value;
+      const sketchGray = computeSketchGray(grayRaw, w, h, shade, hatch, strength);
+      const masked = applyMaskToGray(sketchGray, w, h, 255);
+      const invert = document.getElementById('laserInvert').checked;
+      return {
+        mode:'sketch',
+        lineCanvas: renderSketchCanvas(masked, w, h),
+        laserCanvas: renderSketchLaserCanvas(masked, w, h, invert),
+        svgText: null
+      };
+    } else {
+      const edgeSens = +document.getElementById('edgeRange').value;
+      const denoise = +document.getElementById('denoiseRange').value;
+      let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+      bin = applyMaskToBin(bin, w, h);
+      const lineCanvas = renderLineCanvas(bin, w, h);
+
+      const {w:tw,h:th} = fitSize(wmm,hmm,TRACE_MAX);
+      const traceCanvas = getCroppedCanvas(tw,th);
+      const traceImageData = traceCanvas.getContext('2d').getImageData(0,0,tw,th);
+      const traceGray = toGray(traceImageData);
+      let tbin = computeLineBinary(traceGray, tw, th, edgeSens, Math.max(1,Math.round(denoise*tw/w)));
+      tbin = applyMaskToBin(tbin, tw, th);
+      const segs = traceBinaryToSVGPath(tbin, tw, th);
+      const svgText = buildSVG(segs, tw, th, wmm, hmm);
+      return { mode:'simple', lineCanvas, laserCanvas:null, svgText };
+    }
   }
 
   // 對位十字線 + 打孔圓點記號，統一畫在四個角落（同心）
@@ -857,19 +1039,15 @@
     const brightness = +document.getElementById('brightRange').value;
     const contrast = +document.getElementById('contrastRange').value;
     const invert = document.getElementById('invertHeight').checked;
-    const edgeSens = +document.getElementById('edgeRange').value;
-    const denoise = +document.getElementById('denoiseRange').value;
     const cS = +document.getElementById('cRange').value;
     const mS = +document.getElementById('mRange').value;
     const yS = +document.getElementById('yRange').value;
 
     const grayRaw = toGray(imageData);
     const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
-    let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
-    bin = applyMaskToBin(bin, w, h);
+    const lineCanvas = computeLineArtPreviewCanvas(grayRaw, w, h);
 
     const grayCanvas = renderGrayCanvas(gray, w, h, invert);
-    const lineCanvas = renderLineCanvas(bin, w, h);
     const cCanvas = renderChannelCanvas(imageData, w, h, 'c', cS);
     const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
     const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
@@ -880,7 +1058,7 @@
     drawInto('prevM', mCanvas);
     drawInto('prevY', yCanvas);
 
-    lastPreviewLayers = {w,h,gray,invert,bin,imageData,cCanvas,mCanvas,yCanvas,grayCanvas,lineCanvas};
+    lastPreviewLayers = {w,h,gray,invert,imageData,cCanvas,mCanvas,yCanvas,grayCanvas,lineCanvas};
     renderComposite();
   }
 
@@ -916,7 +1094,6 @@
       ctx.globalAlpha = 1;
     } else {
       const backlight = document.getElementById('backlightSelect').value;
-      const blurPx = +document.getElementById('blurRange').value;
       const vignette = +document.getElementById('vignetteRange').value / 100;
       const atten = +document.getElementById('attenRange').value / 100;
 
@@ -933,9 +1110,7 @@
       octx.globalCompositeOperation = 'source-over';
 
       ctx.clearRect(0,0,w,h);
-      ctx.filter = blurPx > 0 ? `blur(${blurPx}px)` : 'none';
       ctx.drawImage(off,0,0);
-      ctx.filter = 'none';
 
       if(backlight === 'warm'){
         ctx.globalCompositeOperation = 'multiply';
@@ -966,6 +1141,9 @@
     ['cRange','cVal', v=>v+'%'],
     ['mRange','mVal', v=>v+'%'],
     ['yRange','yVal', v=>v+'%'],
+    ['sketchShadeRange','sketchShadeVal', v=>v],
+    ['sketchHatchRange','sketchHatchVal', v=>v],
+    ['sketchStrengthRange','sketchStrengthVal', v=>v],
   ];
   bindings.forEach(([rangeId,labelId,fmt])=>{
     const r = document.getElementById(rangeId);
@@ -977,10 +1155,6 @@
   document.getElementById('invertHeight').addEventListener('change', scheduleUpdate);
 
   document.getElementById('backlightSelect').addEventListener('change', renderComposite);
-  document.getElementById('blurRange').addEventListener('input', e=>{
-    document.getElementById('blurVal').textContent = e.target.value+'px';
-    renderComposite();
-  });
   document.getElementById('attenRange').addEventListener('input', e=>{
     document.getElementById('attenVal').textContent = e.target.value+'%';
     renderComposite();
@@ -993,7 +1167,7 @@
   // ---------- 匯出（完整 600dpi 解析度） ----------
   function setStatus(msg){ document.getElementById('statusLine').textContent = msg; }
 
-  function computeFullLayers(){
+  function computeFullLayers(includeOtherMode){
     const {w,h,wmm,hmm} = fullPixelSize();
     const srcCanvas = getCroppedCanvas(w,h);
     const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
@@ -1001,8 +1175,6 @@
     const brightness = +document.getElementById('brightRange').value;
     const contrast = +document.getElementById('contrastRange').value;
     const invert = document.getElementById('invertHeight').checked;
-    const edgeSens = +document.getElementById('edgeRange').value;
-    const denoise = +document.getElementById('denoiseRange').value;
     const cS = +document.getElementById('cRange').value;
     const mS = +document.getElementById('mRange').value;
     const yS = +document.getElementById('yRange').value;
@@ -1014,20 +1186,14 @@
     const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
     const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
 
-    let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
-    bin = applyMaskToBin(bin, w, h);
-    const lineCanvas = renderLineCanvas(bin, w, h);
+    const primary = computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm);
+    let secondary = null;
+    if(includeOtherMode){
+      const otherMode = lineArtMode === 'sketch' ? 'simple' : 'sketch';
+      secondary = computeLineArtFull(otherMode, grayRaw, w, h, wmm, hmm);
+    }
 
-    const {w:tw,h:th} = fitSize(wmm,hmm,TRACE_MAX);
-    const traceCanvas = getCroppedCanvas(tw,th);
-    const traceImageData = traceCanvas.getContext('2d').getImageData(0,0,tw,th);
-    const traceGray = toGray(traceImageData);
-    let tbin = computeLineBinary(traceGray, tw, th, edgeSens, Math.max(1,Math.round(denoise*tw/w)));
-    tbin = applyMaskToBin(tbin, tw, th);
-    const segs = traceBinaryToSVGPath(tbin, tw, th);
-    const svgText = buildSVG(segs, tw, th, wmm, hmm);
-
-    return {w,h,wmm,hmm, gray, grayCanvas, lineCanvas, cCanvas, mCanvas, yCanvas, svgText};
+    return {w,h,wmm,hmm, gray, grayCanvas, cCanvas, mCanvas, yCanvas, primary, secondary};
   }
 
   function canvasToPNGBlob(canvas){
@@ -1046,10 +1212,14 @@
     if(!img){ setStatus('請先上傳照片。'); return; }
     setStatus('處理中，請稍候…（完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
-    const layers = computeFullLayers();
+    const layers = computeFullLayers(false);
     if(key==='gray'){ downloadBlob(await canvasToPNGBlob(layers.grayCanvas), 'gray-heightmap.png'); }
-    if(key==='line'){ downloadBlob(await canvasToPNGBlob(layers.lineCanvas), 'lineart.png'); }
-    if(key==='linesvg'){ downloadBlob(new Blob([layers.svgText],{type:'image/svg+xml'}), 'lineart.svg'); }
+    if(key==='line'){
+      const fname = layers.primary.mode==='sketch' ? 'lineart-sketch.png' : 'lineart.png';
+      downloadBlob(await canvasToPNGBlob(layers.primary.lineCanvas), fname);
+    }
+    if(key==='linesvg'){ downloadBlob(new Blob([layers.primary.svgText],{type:'image/svg+xml'}), 'lineart.svg'); }
+    if(key==='linelaser'){ downloadBlob(await canvasToPNGBlob(layers.primary.laserCanvas), 'lineart-sketch-laser.png'); }
     if(key==='c'){ downloadBlob(await canvasToPNGBlob(layers.cCanvas), 'layer-cyan.png'); }
     if(key==='m'){ downloadBlob(await canvasToPNGBlob(layers.mCanvas), 'layer-magenta.png'); }
     if(key==='y'){ downloadBlob(await canvasToPNGBlob(layers.yCanvas), 'layer-yellow.png'); }
@@ -1059,6 +1229,7 @@
   document.getElementById('dlGrayPng').addEventListener('click', ()=>exportSingle('gray'));
   document.getElementById('dlLinePng').addEventListener('click', ()=>exportSingle('line'));
   document.getElementById('dlLineSvg').addEventListener('click', ()=>exportSingle('linesvg'));
+  document.getElementById('dlLineLaser').addEventListener('click', ()=>exportSingle('linelaser'));
   document.getElementById('dlCPng').addEventListener('click', ()=>exportSingle('c'));
   document.getElementById('dlMPng').addEventListener('click', ()=>exportSingle('m'));
   document.getElementById('dlYPng').addEventListener('click', ()=>exportSingle('y'));
@@ -1066,44 +1237,62 @@
   function strToBytes(str){ return new TextEncoder().encode(str); }
 
   // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
+  async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
+
+  async function addLineArtFilesToZip(files, layerSet){
+    if(layerSet.mode === 'simple'){
+      files['lineart.png'] = await toU8(await canvasToPNGBlob(layerSet.lineCanvas));
+      files['lineart.svg'] = strToBytes(layerSet.svgText);
+    } else {
+      files['lineart-sketch.png'] = await toU8(await canvasToPNGBlob(layerSet.lineCanvas));
+      files['lineart-sketch-laser.png'] = await toU8(await canvasToPNGBlob(layerSet.laserCanvas));
+    }
+  }
+
   document.getElementById('dlZip').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
     if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js），請確認 assets 資料夾已一併部署。'); return; }
     setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…');
     await new Promise(r=>setTimeout(r,30));
-    const layers = computeFullLayers();
-    const [grayBlob, lineBlob, cBlob, mBlob, yBlob] = await Promise.all([
+    const includeOther = document.getElementById('zipIncludeBoth').checked;
+    const layers = computeFullLayers(includeOther);
+    const [grayBlob, cBlob, mBlob, yBlob] = await Promise.all([
       canvasToPNGBlob(layers.grayCanvas),
-      canvasToPNGBlob(layers.lineCanvas),
       canvasToPNGBlob(layers.cCanvas),
       canvasToPNGBlob(layers.mCanvas),
       canvasToPNGBlob(layers.yCanvas),
     ]);
-    async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
+    const files = {
+      'gray-heightmap.png': await toU8(grayBlob),
+      'layer-cyan.png': await toU8(cBlob),
+      'layer-magenta.png': await toU8(mBlob),
+      'layer-yellow.png': await toU8(yBlob),
+    };
+    await addLineArtFilesToZip(files, layers.primary);
+    if(layers.secondary) await addLineArtFilesToZip(files, layers.secondary);
+
+    const modeNote = layers.secondary
+      ? `已同時包含「簡單線稿」與「素描風」兩種模式的線稿檔案。`
+      : `本次只包含目前選擇的線稿模式（${layers.primary.mode==='sketch'?'素描風':'簡單線稿'}），如需另一種模式請勾選「同時包含另一種線稿模式」後重新打包。`;
     const readme = `照片轉線稿＋CMYK分層工具 — 輸出說明
 
 尺寸：${layers.wmm.toFixed(1)} x ${layers.hmm.toFixed(1)} mm（600 DPI，${layers.w} x ${layers.h} px）
 
 檔案：
 - gray-heightmap.png：灰階高度圖，供3D列印轉換浮雕層厚使用（白=亮/薄，黑=暗/厚，可於工具中反轉）；也可以直接用「⑥ 3D列印模型匯出」按鈕產生STL檔。
-- lineart.png / lineart.svg：線稿，PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。若有開啟「主體遮罩」（含AI自動偵測），線稿只會保留標記範圍內的輪廓。
+- lineart.png / lineart.svg（簡單線稿模式）：PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。
+- lineart-sketch.png / lineart-sketch-laser.png（素描風模式）：一般PNG供列印/當熄燈裝飾層，laser版為雷射雕刻專用灰階點陣（深色=雕更深，如與您軟體慣例相反請在雷射軟體或本工具的反轉選項調整）。
 - layer-cyan.png / layer-magenta.png / layer-yellow.png：CMY調色透明片，供一般CMYK印表機列印在透明列印紙上，依序疊合、背光呈現全彩
 
-所有列印用圖層皆已加上「十字線＋打孔圓點」同心對位記號（四角，可肉眼疊合對位，也可直接打洞穿對位針），座標於各圖層間一致，請依相同尺寸列印以確保疊合精準。
+${modeNote}
+
+若有開啟「主體遮罩」（含AI自動偵測），線稿只會保留標記範圍內的主體輪廓。所有列印用圖層皆已加上「十字線＋打孔圓點」同心對位記號（四角，可肉眼疊合對位，也可直接打洞穿對位針），座標於各圖層間一致，請依相同尺寸列印以確保疊合精準。
 `;
-    const files = {
-      'gray-heightmap.png': await toU8(grayBlob),
-      'lineart.png': await toU8(lineBlob),
-      'lineart.svg': strToBytes(layers.svgText),
-      'layer-cyan.png': await toU8(cBlob),
-      'layer-magenta.png': await toU8(mBlob),
-      'layer-yellow.png': await toU8(yBlob),
-      'README.txt': strToBytes(readme)
-    };
+    files['README.txt'] = strToBytes(readme);
     const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PNG本身已壓縮過，圖層檔案不需再壓一次
     const zipBlob = new Blob([zipped], {type:'application/zip'});
     downloadBlob(zipBlob, 'photo-lithobox-layers.zip');
-    setStatus('完成，ZIP 已下載，內含全部5個檔案＋說明文件。');
+    setStatus(`完成，ZIP 已下載，內含 ${Object.keys(files).length} 個檔案（含說明文件）。`);
   });
 
   // ---------- 3D列印模型匯出（灰階高度圖 → 封閉實體 → 二進位STL） ----------
