@@ -336,6 +336,19 @@
   const A4_MARGIN_MM = 5; // A4紙下載列印圖層預留的列印邊界
   const ANIME_PREVIEW_MAX = 320;  // 日式似顏繪風格即時預覽的AI運算工作解析度上限（越高越清晰但越慢）
   const ANIME_EXPORT_MAX = 1024;  // 日式似顏繪風格下載/匯出的AI運算工作解析度上限，運算後再放大至實際列印像素尺寸
+  const ANIME_MODEL_LOAD_TIMEOUT_MS = 60000;  // AI模型下載逾時上限
+  const ANIME_STYLIZE_TIMEOUT_MS = 120000;    // 單次AI風格轉換運算逾時上限，避免瀏覽器/顯示卡當機時無限期卡住、沒有任何提示
+  const SCRIPT_LOAD_TIMEOUT_MS = 30000;       // 動態載入.js/.wasm等執行檔的逾時上限
+
+  // 為promise加上逾時保護：超過時間會reject並帶有清楚的錯誤訊息，避免因瀏覽器/顯示卡當機等情況
+  // 導致某個非同步運算永遠不resolve也不reject，使用者只能看到卡住卻毫無錯誤訊息、無法得知發生什麼事
+  function withTimeout(promise, ms, timeoutMessage){
+    let timer;
+    const timeout = new Promise((_, reject)=>{
+      timer = setTimeout(()=>reject(new Error(timeoutMessage)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(()=>clearTimeout(timer));
+  }
 
   // ---------- 日式似顏繪風格（CartoonGAN，本機執行的AI圖像風格轉換模型） ----------
   const CARTOON_STYLES = {
@@ -345,13 +358,13 @@
     shinkai: { label: '新海誠風',       url: './assets/cartoon-gan/shinkai/model.json' }
   };
   function loadScriptOnce(src){
-    return new Promise((resolve, reject)=>{
+    return withTimeout(new Promise((resolve, reject)=>{
       const s = document.createElement('script');
       s.src = src;
       s.onload = ()=>resolve();
       s.onerror = ()=>reject(new Error(`找不到 ${src}，請確認 assets 資料夾已一併部署。`));
       document.head.appendChild(s);
-    });
+    }), SCRIPT_LOAD_TIMEOUT_MS, `載入 ${src} 逾時，請檢查網路連線後重新整理頁面再試一次。`);
   }
   let tfjsLoadPromise = null;
   function ensureTfjsLoaded(){
@@ -402,19 +415,17 @@
     tfBackendReadyPromise = (async () => {
       if(!isLikelySoftwareWebGL()){
         try{
-          await tf.setBackend('webgl');
-          await tf.ready();
+          await withTimeout((async()=>{ await tf.setBackend('webgl'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WebGL backend 初始化逾時');
           return;
-        } catch(e){ console.warn('WebGL backend 初始化失敗，改嘗試 WASM backend', e); }
+        } catch(e){ console.warn('WebGL backend 初始化失敗或逾時，改嘗試 WASM backend', e); }
       } else {
         console.warn('偵測到軟體模擬WebGL（無真實GPU加速），改優先使用 WASM backend');
       }
       try{
         await ensureTfWasmBackendLoaded();
-        await tf.setBackend('wasm');
-        await tf.ready();
+        await withTimeout((async()=>{ await tf.setBackend('wasm'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WASM backend 初始化逾時');
         return;
-      } catch(e){ console.warn('WASM backend 初始化失敗，改用純JS CPU backend（運算速度會非常慢）', e); }
+      } catch(e){ console.warn('WASM backend 初始化失敗或逾時，改用純JS CPU backend（運算速度會非常慢）', e); }
       await tf.setBackend('cpu');
       await tf.ready();
     })();
@@ -425,7 +436,11 @@
     await ensureTfjsLoaded();
     await ensureTfBackendReady();
     if(statusEl) statusEl.textContent = `首次使用「${CARTOON_STYLES[styleKey].label}」，正在載入AI模型（約13MB，僅需一次，之後瀏覽器會快取）…`;
-    const model = await tf.loadGraphModel(CARTOON_STYLES[styleKey].url);
+    const model = await withTimeout(
+      tf.loadGraphModel(CARTOON_STYLES[styleKey].url),
+      ANIME_MODEL_LOAD_TIMEOUT_MS,
+      'AI模型下載逾時，請檢查網路連線後重新整理頁面再試一次。'
+    );
     model.predict(tf.zeros([1,1,1,3])).dispose(); // 暖機：讓後續真正的推論不用等第一次的初始化延遲
     cartoonModelCache[styleKey] = model;
     return model;
@@ -459,20 +474,31 @@
     return out;
   }
 
-  // 對來源canvas執行CartoonGAN風格轉換；長時間使用WebGL backend後，偶爾會因內部貼圖管理累積
-  // 而觸發「Requested texture size ... greater than WebGL maximum」錯誤，遇到時自動改用WASM backend重試一次
+  // 對來源canvas執行CartoonGAN風格轉換：
+  // 1) 加上逾時保護（見ANIME_STYLIZE_TIMEOUT_MS），避免WebGL顯示卡驅動卡住/當機時無限期停在「處理中」卻無任何錯誤訊息
+  // 2) 長時間使用WebGL backend後，偶爾會因內部貼圖管理累積而觸發「Requested texture size ... greater than WebGL
+  //    maximum」錯誤；或WebGL執行本身逾時（很可能是顯示卡驅動卡住）；兩種情況都自動改用WASM backend重試一次
   async function runCartoonStylize(styleKey, srcCanvas, statusEl){
+    const attempt = () => withTimeout(
+      runCartoonStylizeOnce(styleKey, srcCanvas, statusEl),
+      ANIME_STYLIZE_TIMEOUT_MS,
+      'AI風格轉換逾時，瀏覽器或顯示卡可能卡住了。'
+    );
     try{
-      return await runCartoonStylizeOnce(styleKey, srcCanvas, statusEl);
+      return await attempt();
     } catch(err){
-      const isTextureSizeErr = /texture size|webgl/i.test((err && err.message) || '');
-      if(isTextureSizeErr && tf.getBackend() === 'webgl'){
-        console.warn('WebGL執行失敗（可能是貼圖尺寸超過上限），改用WASM backend重試一次', err);
+      const msg = (err && err.message) || '';
+      const isRecoverable = /texture size|webgl|逾時/i.test(msg);
+      if(isRecoverable && tf.getBackend() === 'webgl'){
+        console.warn('WebGL執行失敗或逾時，改用WASM backend重試一次', err);
         if(statusEl) statusEl.textContent = 'WebGL執行遇到問題，正在改用相容性較高的運算方式重試…';
         await ensureTfWasmBackendLoaded();
-        await tf.setBackend('wasm');
-        await tf.ready();
-        return await runCartoonStylizeOnce(styleKey, srcCanvas, statusEl);
+        await withTimeout((async()=>{ await tf.setBackend('wasm'); await tf.ready(); })(), SCRIPT_LOAD_TIMEOUT_MS, 'WASM backend 初始化逾時');
+        try{
+          return await attempt();
+        } catch(err2){
+          throw new Error((err2 && err2.message ? err2.message : String(err2)) + '（已嘗試改用WASM重試仍失敗，建議重新整理頁面後再試一次，或改用素描風模式）');
+        }
       }
       throw err;
     }
@@ -1491,9 +1517,29 @@
     startNewPage();
 
     for(let i=0;i<jobs.length;i++){
-      if(statusCb) statusCb(`處理中（${i+1}/${jobs.length}）：${jobs[i].label}…`);
+      const jobLabel = jobs[i].label;
+      const baseMsg = `處理中（${i+1}/${jobs.length}）：${jobLabel}`;
+      if(statusCb) statusCb(baseMsg + '…');
       await new Promise(r=>setTimeout(r,0)); // 讓出主執行緒，讓狀態文字先畫出來
-      const layerCanvas = await jobs[i].make();
+
+      // 若這個工作是日式似顏繪風格（AI運算，耗時較久），把④區塊animeStatus的細部進度
+      // 也定期同步顯示在這裡的主要狀態列，讓使用者不用切換畫面也能看到目前AI實際在做什麼，
+      // 避免長時間沒有變化而誤以為畫面卡住
+      let mirrorTimer = null;
+      if(statusCb && jobLabel.indexOf('日式似顏繪') !== -1){
+        const animeStatusEl = document.getElementById('animeStatus');
+        mirrorTimer = setInterval(()=>{
+          const sub = animeStatusEl ? animeStatusEl.textContent : '';
+          statusCb(sub ? `${baseMsg} — ${sub}` : baseMsg + '…');
+        }, 400);
+      }
+      let layerCanvas;
+      try{
+        layerCanvas = await jobs[i].make();
+      } finally {
+        if(mirrorTimer) clearInterval(mirrorTimer);
+      }
+
       if(idxOnPage >= grid.perPage){ pages.push(curPage); startNewPage(); }
       const col = idxOnPage % grid.cols, row = Math.floor(idxOnPage / grid.cols);
       const xmm = grid.offXmm + col*wmm, ymm = grid.offYmm + row*hmm;
@@ -1541,6 +1587,15 @@
     if(!img){ setStatus('請先上傳照片。'); return; }
     setStatus('處理中，請稍候…（完整解析度運算需要一點時間，日式似顏繪風格因為要跑AI模型會較久）');
     await new Promise(r=>setTimeout(r,30));
+    // 若目前是日式似顏繪風格，把④區塊animeStatus的細部AI進度同步顯示在主要狀態列，避免看起來像卡住
+    let mirrorTimer = null;
+    if(lineArtMode === 'anime'){
+      const animeStatusEl = document.getElementById('animeStatus');
+      mirrorTimer = setInterval(()=>{
+        const sub = animeStatusEl ? animeStatusEl.textContent : '';
+        if(sub) setStatus(`處理中：${sub}`);
+      }, 400);
+    }
     try{
       const {w,h,wmm,hmm} = fullPixelSize();
       const srcCanvas = getCroppedCanvas(w,h);
@@ -1553,6 +1608,8 @@
     } catch(err){
       setStatus('產生雷射雕刻檔案失敗：'+err.message);
       console.error(err);
+    } finally {
+      if(mirrorTimer) clearInterval(mirrorTimer);
     }
   });
 
