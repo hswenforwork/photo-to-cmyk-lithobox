@@ -113,6 +113,7 @@
         <option value="A5" selected>A5（148 × 210 mm）</option>
         <option value="6x4">6×4 吋相片紙</option>
         <option value="7x5">7×5 吋相片紙</option>
+        <option value="5x3">5×3 吋相片紙</option>
       </select>
       <label>方向</label>
       <select id="orientSelect">
@@ -137,6 +138,7 @@
         <button class="btn" id="modeErase" type="button">🧹 擦除標記</button>
       </div>
       <div class="note">拖曳照片可調整位置，滑桿可放大縮小，框內範圍即為最終裁切範圍。</div>
+      <label style="margin-top:10px;"><input type="checkbox" id="mirrorFlip" style="width:auto; display:inline-block; margin-right:6px;">水平鏡像翻轉照片（左右鏡射）</label>
 
       <h3>主體遮罩（線稿僅套用此範圍，可選）</h3>
       <button class="btn" id="aiDetect" type="button">🤖 自動偵測主體（AI，辨識人物／動物輪廓）</button>
@@ -196,6 +198,10 @@
       <h2>即時預覽 — 各圖層</h2>
       <div class="layerGrid">
         <div class="layerCard">
+          <canvas id="prevOriginal"></canvas>
+          <div class="cap">原始照片（裁切構圖後）</div>
+        </div>
+        <div class="layerCard">
           <canvas id="prevGray"></canvas>
           <div class="cap">灰階高度圖（3D列印）</div>
         </div>
@@ -253,6 +259,7 @@
     <section class="panel">
       <h2>⑤ 下載列印圖層</h2>
       <div class="btn-row">
+        <button class="btn" id="dlOriginalPng">原始裁切照片 PNG</button>
         <button class="btn" id="dlGrayPng">灰階高度圖 PNG</button>
         <button class="btn" id="dlLinePng">線稿 PNG</button>
         <button class="btn" id="dlLineSvg">線稿 SVG（雷射雕刻用）</button>
@@ -311,8 +318,10 @@
   const SIZES = {
     A5:  { wmm: 148, hmm: 210 },
     "6x4": { wmm: 6*25.4, hmm: 4*25.4 },
-    "7x5": { wmm: 7*25.4, hmm: 5*25.4 }
+    "7x5": { wmm: 7*25.4, hmm: 5*25.4 },
+    "5x3": { wmm: 5*25.4, hmm: 3*25.4 }
   };
+  const MARK_INSET_MM = 5; // 對位十字＋打孔記號距離頁面邊界的固定距離（mm）
   const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
   const TRACE_MAX = 1400;      // 線稿向量化的工作解析度上限（避免SVG過於龐大）
 
@@ -324,6 +333,9 @@
     let {wmm,hmm} = SIZES[key];
     if(orient === 'landscape' && hmm > wmm){ const t=wmm; wmm=hmm; hmm=t; }
     if(orient === 'portrait' && wmm > hmm){ const t=wmm; wmm=hmm; hmm=t; }
+    // 輸出尺寸四捨五入至整數mm，避免出現如152.4mm的小數尺寸
+    wmm = Math.round(wmm);
+    hmm = Math.round(hmm);
     return {wmm, hmm};
   }
 
@@ -378,11 +390,14 @@
 
   document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
   document.getElementById('orientSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); scheduleUpdate(); updateSTLEstimate(); });
+  document.getElementById('mirrorFlip').addEventListener('change', ()=>{ drawCropper(); scheduleUpdate(); });
 
   function updateDimHint(){
     const {w,h,wmm,hmm} = fullPixelSize();
+    const crossDistX = wmm - 2*MARK_INSET_MM;
+    const crossDistY = hmm - 2*MARK_INSET_MM;
     document.getElementById('dimHint').textContent =
-      `解析度：${w} × ${h} px（實際尺寸 ${wmm.toFixed(1)} × ${hmm.toFixed(1)} mm）`;
+      `解析度：${w} × ${h} px（實際尺寸 ${wmm} × ${hmm} mm；四角對位十字距邊界各${MARK_INSET_MM}mm，十字中心間距 橫${crossDistX} × 縱${crossDistY} mm）`;
   }
   updateDimHint();
 
@@ -424,7 +439,10 @@
     const drawH = baseH * crop.zoom;
     const cx = w/2 + crop.offX;
     const cy = h/2 + crop.offY;
+    const mirror = document.getElementById('mirrorFlip').checked;
+    if(mirror){ ctx.save(); ctx.translate(w,0); ctx.scale(-1,1); }
     ctx.drawImage(img, cx-drawW/2, cy-drawH/2, drawW, drawH);
+    if(mirror){ ctx.restore(); }
 
     // 對位參考框線
     ctx.strokeStyle = 'rgba(95,176,255,0.9)';
@@ -577,7 +595,10 @@
     const cy = outH/2 + crop.offY*ratio;
     octx.fillStyle = '#fff';
     octx.fillRect(0,0,outW,outH);
+    const mirror = document.getElementById('mirrorFlip').checked;
+    if(mirror){ octx.save(); octx.translate(outW,0); octx.scale(-1,1); }
     octx.drawImage(img, cx-drawW/2, cy-drawH/2, drawW, drawH);
+    if(mirror){ octx.restore(); }
     return out;
   }
 
@@ -750,7 +771,7 @@
     return applyCrossHatch(base, w, h, spacing, hatchStrengthPct);
   }
 
-  function renderSketchCanvas(sketchGray, w, h, markColor){
+  function renderSketchCanvas(sketchGray, w, h, wmm, hmm, markColor){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -759,12 +780,12 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h, markColor || 'rgba(150,70,255,0.85)');
+    drawAlignmentMarks(ctx,w,h,wmm,hmm, markColor || 'rgba(150,70,255,0.85)');
     return c;
   }
 
   // 雷射雕刻專用灰階點陣：與一般PNG同一份濃淡資料，但對位記號改用純黑（避免彩色標記干擾雷射軟體判讀灰階深度），並可選反轉黑白
-  function renderSketchLaserCanvas(sketchGray, w, h, invert){
+  function renderSketchLaserCanvas(sketchGray, w, h, wmm, hmm, invert){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -774,25 +795,25 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,'rgba(0,0,0,0.9)');
+    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(0,0,0,0.9)');
     return c;
   }
 
   // 依目前選中的線稿模式，計算「熄燈裝飾層」的預覽用canvas（低解析度，供即時預覽/合成預覽使用）
-  function computeLineArtPreviewCanvas(grayRaw, w, h){
+  function computeLineArtPreviewCanvas(grayRaw, w, h, wmm, hmm){
     if(lineArtMode === 'sketch'){
       const shade = +document.getElementById('sketchShadeRange').value;
       const hatch = +document.getElementById('sketchHatchRange').value;
       const strength = +document.getElementById('sketchStrengthRange').value;
       const sketchGray = computeSketchGray(grayRaw, w, h, shade, hatch, strength);
       const masked = applyMaskToGray(sketchGray, w, h, 255);
-      return renderSketchCanvas(masked, w, h);
+      return renderSketchCanvas(masked, w, h, wmm, hmm);
     } else {
       const edgeSens = +document.getElementById('edgeRange').value;
       const denoise = +document.getElementById('denoiseRange').value;
       let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
       bin = applyMaskToBin(bin, w, h);
-      return renderLineCanvas(bin, w, h);
+      return renderLineCanvas(bin, w, h, wmm, hmm);
     }
   }
 
@@ -807,8 +828,8 @@
       const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'sketch',
-        lineCanvas: renderSketchCanvas(masked, w, h),
-        laserCanvas: renderSketchLaserCanvas(masked, w, h, invert),
+        lineCanvas: renderSketchCanvas(masked, w, h, wmm, hmm),
+        laserCanvas: renderSketchLaserCanvas(masked, w, h, wmm, hmm, invert),
         svgText: null
       };
     } else {
@@ -816,7 +837,7 @@
       const denoise = +document.getElementById('denoiseRange').value;
       let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
       bin = applyMaskToBin(bin, w, h);
-      const lineCanvas = renderLineCanvas(bin, w, h);
+      const lineCanvas = renderLineCanvas(bin, w, h, wmm, hmm);
 
       const {w:tw,h:th} = fitSize(wmm,hmm,TRACE_MAX);
       const traceCanvas = getCroppedCanvas(tw,th);
@@ -830,17 +851,19 @@
     }
   }
 
-  // 對位十字線 + 打孔圓點記號，統一畫在四個角落（同心）
-  function drawAlignmentMarks(ctx, w, h, color){
+  // 對位十字線 + 打孔圓點記號，固定畫在四個角落，且距離頁面邊界固定為 MARK_INSET_MM（mm），
+  // 以 wmm/hmm（實際物理尺寸）換算px/mm比例，確保不同解析度（預覽/完整輸出）下位置與尺寸一致
+  function drawAlignmentMarks(ctx, w, h, wmm, hmm, color){
     color = color || 'rgba(0,0,0,0.85)';
-    const inset = Math.min(w,h) * 0.05;
-    const crossLen = Math.min(w,h) * 0.02;
-    const dotR = Math.min(w,h) * 0.006;
+    const pxPerMm = w / wmm;
+    const inset = MARK_INSET_MM * pxPerMm;
+    const crossLen = 3 * pxPerMm;
+    const dotR = 0.9 * pxPerMm;
     const corners = [ [inset,inset], [w-inset,inset], [inset,h-inset], [w-inset,h-inset] ];
     ctx.save();
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0015);
+    ctx.lineWidth = Math.max(1, pxPerMm*0.3);
     corners.forEach(([cx,cy])=>{
       ctx.beginPath();
       ctx.moveTo(cx-crossLen, cy); ctx.lineTo(cx+crossLen, cy);
@@ -853,7 +876,7 @@
     ctx.restore();
   }
 
-  function renderGrayCanvas(gray, w, h, invert){
+  function renderGrayCanvas(gray, w, h, wmm, hmm, invert){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -863,11 +886,11 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,'rgba(255,0,0,0.7)');
+    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(255,0,0,0.7)');
     return c;
   }
 
-  function renderLineCanvas(bin, w, h){
+  function renderLineCanvas(bin, w, h, wmm, hmm){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -876,11 +899,11 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,'rgba(0,120,255,0.8)');
+    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(0,120,255,0.8)');
     return c;
   }
 
-  function renderChannelCanvas(imageData, w, h, channel, strength){
+  function renderChannelCanvas(imageData, w, h, wmm, hmm, channel, strength){
     // channel: 'c' | 'm' | 'y'
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
@@ -898,7 +921,16 @@
     }
     ctx.putImageData(id,0,0);
     const markColor = channel==='c' ? 'rgba(0,183,214,0.9)' : channel==='m' ? 'rgba(232,41,154,0.9)' : 'rgba(180,150,0,0.9)';
-    drawAlignmentMarks(ctx,w,h,markColor);
+    drawAlignmentMarks(ctx,w,h,wmm,hmm,markColor);
+    return c;
+  }
+
+  // 原始種片：裁切構圖過後的原始彩色照片，作為額外輸出圖層（供對照排版/存檔使用），同樣加上對位記號
+  function renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx = c.getContext('2d');
+    ctx.putImageData(imageData,0,0);
+    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(0,0,0,0.6)');
     return c;
   }
 
@@ -1045,20 +1077,22 @@
 
     const grayRaw = toGray(imageData);
     const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
-    const lineCanvas = computeLineArtPreviewCanvas(grayRaw, w, h);
+    const lineCanvas = computeLineArtPreviewCanvas(grayRaw, w, h, wmm, hmm);
 
-    const grayCanvas = renderGrayCanvas(gray, w, h, invert);
-    const cCanvas = renderChannelCanvas(imageData, w, h, 'c', cS);
-    const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
-    const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
+    const grayCanvas = renderGrayCanvas(gray, w, h, wmm, hmm, invert);
+    const cCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'c', cS);
+    const mCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'm', mS);
+    const yCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'y', yS);
+    const originalCanvas = renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm);
 
     drawInto('prevGray', grayCanvas);
     drawInto('prevLine', lineCanvas);
     drawInto('prevC', cCanvas);
     drawInto('prevM', mCanvas);
     drawInto('prevY', yCanvas);
+    drawInto('prevOriginal', originalCanvas);
 
-    lastPreviewLayers = {w,h,gray,invert,imageData,cCanvas,mCanvas,yCanvas,grayCanvas,lineCanvas};
+    lastPreviewLayers = {w,h,gray,invert,imageData,cCanvas,mCanvas,yCanvas,grayCanvas,lineCanvas,originalCanvas};
     renderComposite();
   }
 
@@ -1181,10 +1215,11 @@
 
     const grayRaw = toGray(imageData);
     const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
-    const grayCanvas = renderGrayCanvas(gray, w, h, invert);
-    const cCanvas = renderChannelCanvas(imageData, w, h, 'c', cS);
-    const mCanvas = renderChannelCanvas(imageData, w, h, 'm', mS);
-    const yCanvas = renderChannelCanvas(imageData, w, h, 'y', yS);
+    const grayCanvas = renderGrayCanvas(gray, w, h, wmm, hmm, invert);
+    const cCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'c', cS);
+    const mCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'm', mS);
+    const yCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'y', yS);
+    const originalCanvas = renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm);
 
     const primary = computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm);
     let secondary = null;
@@ -1193,7 +1228,7 @@
       secondary = computeLineArtFull(otherMode, grayRaw, w, h, wmm, hmm);
     }
 
-    return {w,h,wmm,hmm, gray, grayCanvas, cCanvas, mCanvas, yCanvas, primary, secondary};
+    return {w,h,wmm,hmm, gray, grayCanvas, cCanvas, mCanvas, yCanvas, originalCanvas, primary, secondary};
   }
 
   function canvasToPNGBlob(canvas){
@@ -1213,6 +1248,7 @@
     setStatus('處理中，請稍候…（完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
     const layers = computeFullLayers(false);
+    if(key==='original'){ downloadBlob(await canvasToPNGBlob(layers.originalCanvas), 'original-cropped.png'); }
     if(key==='gray'){ downloadBlob(await canvasToPNGBlob(layers.grayCanvas), 'gray-heightmap.png'); }
     if(key==='line'){
       const fname = layers.primary.mode==='sketch' ? 'lineart-sketch.png' : 'lineart.png';
@@ -1226,6 +1262,7 @@
     setStatus('完成，檔案已下載。');
   }
 
+  document.getElementById('dlOriginalPng').addEventListener('click', ()=>exportSingle('original'));
   document.getElementById('dlGrayPng').addEventListener('click', ()=>exportSingle('gray'));
   document.getElementById('dlLinePng').addEventListener('click', ()=>exportSingle('line'));
   document.getElementById('dlLineSvg').addEventListener('click', ()=>exportSingle('linesvg'));
@@ -1256,13 +1293,15 @@
     await new Promise(r=>setTimeout(r,30));
     const includeOther = document.getElementById('zipIncludeBoth').checked;
     const layers = computeFullLayers(includeOther);
-    const [grayBlob, cBlob, mBlob, yBlob] = await Promise.all([
+    const [originalBlob, grayBlob, cBlob, mBlob, yBlob] = await Promise.all([
+      canvasToPNGBlob(layers.originalCanvas),
       canvasToPNGBlob(layers.grayCanvas),
       canvasToPNGBlob(layers.cCanvas),
       canvasToPNGBlob(layers.mCanvas),
       canvasToPNGBlob(layers.yCanvas),
     ]);
     const files = {
+      'original-cropped.png': await toU8(originalBlob),
       'gray-heightmap.png': await toU8(grayBlob),
       'layer-cyan.png': await toU8(cBlob),
       'layer-magenta.png': await toU8(mBlob),
@@ -1276,9 +1315,10 @@
       : `本次只包含目前選擇的線稿模式（${layers.primary.mode==='sketch'?'素描風':'簡單線稿'}），如需另一種模式請勾選「同時包含另一種線稿模式」後重新打包。`;
     const readme = `照片轉線稿＋CMYK分層工具 — 輸出說明
 
-尺寸：${layers.wmm.toFixed(1)} x ${layers.hmm.toFixed(1)} mm（600 DPI，${layers.w} x ${layers.h} px）
+尺寸：${layers.wmm} x ${layers.hmm} mm（600 DPI，${layers.w} x ${layers.h} px）
 
 檔案：
+- original-cropped.png：原始照片經裁切構圖後的彩色成品（未做任何線稿/分色處理），可作為排版對照或存檔備份使用。
 - gray-heightmap.png：灰階高度圖，供3D列印轉換浮雕層厚使用（白=亮/薄，黑=暗/厚，可於工具中反轉）；也可以直接用「⑥ 3D列印模型匯出」按鈕產生STL檔。
 - lineart.png / lineart.svg（簡單線稿模式）：PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。
 - lineart-sketch.png / lineart-sketch-laser.png（素描風模式）：一般PNG供列印/當熄燈裝飾層，laser版為雷射雕刻專用灰階點陣（深色=雕更深，如與您軟體慣例相反請在雷射軟體或本工具的反轉選項調整）。
@@ -1286,7 +1326,7 @@
 
 ${modeNote}
 
-若有開啟「主體遮罩」（含AI自動偵測），線稿只會保留標記範圍內的主體輪廓。所有列印用圖層皆已加上「十字線＋打孔圓點」同心對位記號（四角，可肉眼疊合對位，也可直接打洞穿對位針），座標於各圖層間一致，請依相同尺寸列印以確保疊合精準。
+若有開啟「主體遮罩」（含AI自動偵測），線稿只會保留標記範圍內的主體輪廓。所有列印用圖層皆已加上「十字線＋打孔圓點」同心對位記號，固定位於四角、距離頁面邊界各${MARK_INSET_MM}mm，座標於各圖層間一致，請依相同尺寸列印以確保疊合精準。
 `;
     files['README.txt'] = strToBytes(readme);
     const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PNG本身已壓縮過，圖層檔案不需再壓一次
