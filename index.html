@@ -113,7 +113,7 @@
         <option value="A5" selected>A5（148 × 210 mm）</option>
         <option value="6x4">6×4 吋相片紙</option>
         <option value="7x5">7×5 吋相片紙</option>
-        <option value="5x3">5×3 吋相片紙</option>
+        <option value="5x3.5">5×3.5 吋相片紙（L判標準尺寸）</option>
       </select>
       <label>方向</label>
       <select id="orientSelect">
@@ -154,15 +154,16 @@
       <h2>④ 參數調整</h2>
       <h3>線稿風格</h3>
       <div class="tabs" id="lineModeTabs">
-        <div class="tab active" data-linemode="simple">簡單線稿（邊緣偵測）</div>
+        <div class="tab active" data-linemode="anime">日式似顏繪風格</div>
         <div class="tab" data-linemode="sketch">素描風（鉛筆筆觸）</div>
       </div>
 
-      <div id="simpleLineControls">
+      <div id="animeLineControls">
         <label>靈敏度 <span class="value-pill" id="edgeVal">50</span></label>
         <input type="range" id="edgeRange" min="1" max="100" value="50">
         <label>去雜訊模糊（線稿更乾淨、減少雜點） <span class="value-pill" id="denoiseVal">1px</span></label>
         <input type="range" id="denoiseRange" min="0" max="5" value="1">
+        <div class="note">日式似顏繪風格為純圖像處理濾鏡（非AI模型）：先做色調分層讓色塊交界處形成乾淨俐落的分色輪廓線，再疊加五官等細節線條並加粗成日式漫畫/插畫風格的墨線，效果會依上方主體遮罩只套用在主體範圍內。</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -207,7 +208,7 @@
         </div>
         <div class="layerCard">
           <canvas id="prevLine"></canvas>
-          <div class="cap" id="prevLineCap">簡單線稿（熄燈裝飾層）</div>
+          <div class="cap" id="prevLineCap">日式似顏繪風格線稿（熄燈裝飾層）</div>
         </div>
         <div class="layerCard">
           <canvas id="prevC"></canvas>
@@ -259,20 +260,20 @@
     <section class="panel">
       <h2>⑤ 下載列印圖層</h2>
       <div class="btn-row">
-        <button class="btn" id="dlOriginalPng">原始裁切照片 PNG</button>
-        <button class="btn" id="dlGrayPng">灰階高度圖 PNG</button>
-        <button class="btn" id="dlLinePng">線稿 PNG</button>
+        <button class="btn" id="dlOriginalPng">原始裁切照片 PNG（A4排版）</button>
+        <button class="btn" id="dlGrayPng">灰階高度圖 PNG（A4排版）</button>
+        <button class="btn" id="dlLinePng">線稿 PNG（A4排版）</button>
         <button class="btn" id="dlLineSvg">線稿 SVG（雷射雕刻用）</button>
         <button class="btn hidden" id="dlLineLaser">線稿 雷射雕刻灰階PNG</button>
-        <button class="btn" id="dlCPng">Cyan 版 PNG</button>
-        <button class="btn" id="dlMPng">Magenta 版 PNG</button>
-        <button class="btn" id="dlYPng">Yellow 版 PNG</button>
+        <button class="btn" id="dlCPng">Cyan 版 PNG（A4排版）</button>
+        <button class="btn" id="dlMPng">Magenta 版 PNG（A4排版）</button>
+        <button class="btn" id="dlYPng">Yellow 版 PNG（A4排版）</button>
       </div>
       <label class="hidden" id="laserInvertWrap" style="margin-top:8px;"><input type="checkbox" id="laserInvert" style="width:auto; display:inline-block; margin-right:6px;">雷射雕刻灰階PNG反轉黑白（依您雷射雕刻軟體的深淺慣例調整，多數軟體「深色=雕更深」）</label>
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種線稿模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">所有列印用圖層皆已依所選尺寸輸出為 600dpi 全解析度，並在四角加上「十字線＋打孔圓點同心對位記號」，方便疊合列印後裁切、打孔對位。簡單線稿模式的 SVG 已依實際物理尺寸（mm）建立座標，可直接匯入雷射雕刻軟體使用；素描風模式因為是連續灰階筆觸效果，改為提供「雷射雕刻專用灰階PNG」，多數支援灰階深度雕刻的雷射雕刻軟體可直接讀取（深色=雕更深），如與您的軟體慣例相反可勾選反轉。</div>
+      <div class="note">除了 SVG 與雷射雕刻專用灰階PNG外，所有 PNG 列印圖層皆已排版置中於 A4 紙（210×297mm，600dpi），並統一預留 5mm 列印邊界，確保各圖層在A4紙上的位置與比例完全一致，可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸；裁切下來的圖層四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。日式似顏繪風格模式的 SVG 已依實際物理尺寸（mm）建立座標，可直接匯入雷射雕刻軟體使用；素描風模式因為是連續灰階筆觸效果，改為提供「雷射雕刻專用灰階PNG」，多數支援灰階深度雕刻的雷射雕刻軟體可直接讀取（深色=雕更深），如與您的軟體慣例相反可勾選反轉。</div>
     </section>
 
     <section class="panel">
@@ -319,11 +320,13 @@
     A5:  { wmm: 148, hmm: 210 },
     "6x4": { wmm: 6*25.4, hmm: 4*25.4 },
     "7x5": { wmm: 7*25.4, hmm: 5*25.4 },
-    "5x3": { wmm: 5*25.4, hmm: 3*25.4 }
+    "5x3.5": { wmm: 5*25.4, hmm: 3.5*25.4 }
   };
   const MARK_INSET_MM = 5; // 對位十字＋打孔記號距離頁面邊界的固定距離（mm）
   const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
   const TRACE_MAX = 1400;      // 線稿向量化的工作解析度上限（避免SVG過於龐大）
+  const A4_PORTRAIT_WMM = 210, A4_PORTRAIT_HMM = 297; // A4紙直向尺寸
+  const A4_MARGIN_MM = 5; // A4紙下載列印圖層預留的列印邊界
 
   function mmToPx(mm, dpi){ return Math.round(mm/25.4*dpi); }
 
@@ -350,6 +353,34 @@
     if(ratio >= 1){ w = maxPx; h = Math.round(maxPx/ratio); }
     else { h = maxPx; w = Math.round(maxPx*ratio); }
     return {w,h};
+  }
+
+  // 依內容方向（直向／橫向）選擇A4紙也用同方向排版，確保有足夠邊界空間
+  function a4PageMm(contentWmm, contentHmm){
+    return (contentWmm > contentHmm)
+      ? { pageWmm: A4_PORTRAIT_HMM, pageHmm: A4_PORTRAIT_WMM }
+      : { pageWmm: A4_PORTRAIT_WMM, pageHmm: A4_PORTRAIT_HMM };
+  }
+
+  // 將單一列印圖層排版置中於A4紙（列印邊界預留5mm），確保各圖層在A4紙上的比例／位置一致，方便直接下載後用家用印表機列印
+  function composeOnA4(layerCanvas, wmm, hmm){
+    const {pageWmm, pageHmm} = a4PageMm(wmm, hmm);
+    const pageW = mmToPx(pageWmm, DPI), pageH = mmToPx(pageHmm, DPI);
+    const c = document.createElement('canvas'); c.width = pageW; c.height = pageH;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,pageW,pageH);
+    const offX = Math.round((pageW - layerCanvas.width)/2);
+    const offY = Math.round((pageH - layerCanvas.height)/2);
+    ctx.drawImage(layerCanvas, offX, offY);
+    // 裁切參考虛線框，標示實際圖層尺寸邊界，方便列印後沿線裁切
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150,150,150,0.9)';
+    ctx.lineWidth = Math.max(1, mmToPx(0.2, DPI));
+    ctx.setLineDash([mmToPx(2,DPI), mmToPx(2,DPI)]);
+    ctx.strokeRect(offX, offY, layerCanvas.width, layerCanvas.height);
+    ctx.restore();
+    return c;
   }
 
   // ---------- 狀態 ----------
@@ -505,11 +536,11 @@
   });
   document.getElementById('maskEnable').addEventListener('change', scheduleUpdate);
 
-  // ---------- 線稿風格模式：簡單線稿（邊緣偵測） / 素描風（鉛筆筆觸） ----------
-  let lineArtMode = 'simple';
+  // ---------- 線稿風格模式：日式似顏繪風格（圖像處理濾鏡） / 素描風（鉛筆筆觸） ----------
+  let lineArtMode = 'anime';
   function updatePrevLineCap(){
     document.getElementById('prevLineCap').textContent =
-      lineArtMode === 'sketch' ? '素描風線稿（熄燈裝飾層）' : '簡單線稿（熄燈裝飾層）';
+      lineArtMode === 'sketch' ? '素描風線稿（熄燈裝飾層）' : '日式似顏繪風格線稿（熄燈裝飾層）';
   }
   function updateLineArtDownloadUI(){
     const sketch = lineArtMode === 'sketch';
@@ -522,7 +553,7 @@
       document.querySelectorAll('#lineModeTabs .tab').forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
       lineArtMode = tab.dataset.linemode;
-      document.getElementById('simpleLineControls').classList.toggle('hidden', lineArtMode!=='simple');
+      document.getElementById('animeLineControls').classList.toggle('hidden', lineArtMode!=='anime');
       document.getElementById('sketchLineControls').classList.toggle('hidden', lineArtMode!=='sketch');
       updatePrevLineCap();
       updateLineArtDownloadUI();
@@ -685,10 +716,85 @@
     return bin;
   }
 
-  function computeLineBinary(grayRaw, w, h, edgeSens, denoiseRadius){
-    const smoothed = boxBlur(grayRaw, w, h, denoiseRadius);
-    const {mag,max} = sobel(smoothed, w, h);
-    return thresholdEdges(mag, max, edgeSens);
+  // 色調分層（posterize）：把連續灰階簡化成幾個色階，色塊交界處會自然形成乾淨俐落的動漫風分色線
+  function posterizeGray(gray, levels){
+    const step = 255/(levels-1);
+    const out = new Float32Array(gray.length);
+    for(let i=0;i<gray.length;i++){ out[i] = Math.round(gray[i]/step)*step; }
+    return out;
+  }
+
+  // 去除只有0~1個鄰居的孤立雜點，讓線條看起來更乾淨俐落（去除邊緣偵測常見的雜訊小點）
+  function despeckleBinary(bin, w, h){
+    const out = new Uint8Array(bin);
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        const idx = y*w+x;
+        if(!bin[idx]) continue;
+        let cnt=0;
+        for(let dy=-1;dy<=1;dy++){
+          for(let dx=-1;dx<=1;dx++){
+            if(dx===0 && dy===0) continue;
+            if(bin[idx+dy*w+dx]) cnt++;
+          }
+        }
+        if(cnt<2) out[idx]=0;
+      }
+    }
+    return out;
+  }
+
+  // 可分離式最大值濾波（形態學膨脹），用於把線條加粗成日式漫畫俐落的粗曠墨線
+  function maxFilter1D(bin, w, h, radius, horizontal){
+    const out = new Uint8Array(w*h);
+    if(horizontal){
+      for(let y=0;y<h;y++){
+        const rowOff = y*w;
+        for(let x=0;x<w;x++){
+          let v=0;
+          const xs=Math.max(0,x-radius), xe=Math.min(w-1,x+radius);
+          for(let xx=xs; xx<=xe; xx++){ if(bin[rowOff+xx]){ v=1; break; } }
+          out[rowOff+x]=v;
+        }
+      }
+    } else {
+      for(let x=0;x<w;x++){
+        for(let y=0;y<h;y++){
+          let v=0;
+          const ys=Math.max(0,y-radius), ye=Math.min(h-1,y+radius);
+          for(let yy=ys; yy<=ye; yy++){ if(bin[yy*w+x]){ v=1; break; } }
+          out[y*w+x]=v;
+        }
+      }
+    }
+    return out;
+  }
+  function dilateBinary(bin, w, h, radius){
+    if(radius<=0) return bin;
+    return maxFilter1D(maxFilter1D(bin,w,h,radius,true), w, h, radius, false);
+  }
+
+  // 日式似顏繪風格線稿（純圖像處理濾鏡，非AI）：
+  // 1) 先做較強的平滑去除皮膚/雜訊細節，色調分層讓色塊交界處形成乾淨的分色輪廓線
+  // 2) 另外在較不模糊的圖上抓一次細節線條，避免簡化過頭遺失眼睛/嘴巴等五官輪廓
+  // 3) 合併兩種線條、去雜點、加粗，模擬日式漫畫/插畫俐落粗曠的墨線風格
+  function computeAnimeLineBinary(grayRaw, w, h, edgeSens, denoiseRadius){
+    const smoothed = boxBlur(grayRaw, w, h, Math.max(2, denoiseRadius+2));
+    const posterized = posterizeGray(smoothed, 5);
+    const {mag:magP, max:maxP} = sobel(posterized, w, h);
+    const binRegion = thresholdEdges(magP, maxP, Math.min(100, edgeSens+20));
+
+    const fineSmoothed = boxBlur(grayRaw, w, h, Math.max(1, Math.round(denoiseRadius*0.5)));
+    const {mag:magF, max:maxF} = sobel(fineSmoothed, w, h);
+    const binFine = thresholdEdges(magF, maxF, edgeSens);
+
+    const n = w*h;
+    const combined = new Uint8Array(n);
+    for(let i=0;i<n;i++){ combined[i] = (binRegion[i] || binFine[i]) ? 1 : 0; }
+
+    const despeckled = despeckleBinary(combined, w, h);
+    const boldRadius = Math.max(1, Math.round(Math.min(w,h) * 0.0018));
+    return dilateBinary(despeckled, w, h, boldRadius);
   }
 
   // 取得使用者手繪／AI產生的「主體遮罩」，縮放到指定解析度，回傳 1=保留線稿 / 0=去除
@@ -811,7 +917,7 @@
     } else {
       const edgeSens = +document.getElementById('edgeRange').value;
       const denoise = +document.getElementById('denoiseRange').value;
-      let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+      let bin = computeAnimeLineBinary(grayRaw, w, h, edgeSens, denoise);
       bin = applyMaskToBin(bin, w, h);
       return renderLineCanvas(bin, w, h, wmm, hmm);
     }
@@ -835,7 +941,7 @@
     } else {
       const edgeSens = +document.getElementById('edgeRange').value;
       const denoise = +document.getElementById('denoiseRange').value;
-      let bin = computeLineBinary(grayRaw, w, h, edgeSens, denoise);
+      let bin = computeAnimeLineBinary(grayRaw, w, h, edgeSens, denoise);
       bin = applyMaskToBin(bin, w, h);
       const lineCanvas = renderLineCanvas(bin, w, h, wmm, hmm);
 
@@ -843,11 +949,11 @@
       const traceCanvas = getCroppedCanvas(tw,th);
       const traceImageData = traceCanvas.getContext('2d').getImageData(0,0,tw,th);
       const traceGray = toGray(traceImageData);
-      let tbin = computeLineBinary(traceGray, tw, th, edgeSens, Math.max(1,Math.round(denoise*tw/w)));
+      let tbin = computeAnimeLineBinary(traceGray, tw, th, edgeSens, Math.max(1,Math.round(denoise*tw/w)));
       tbin = applyMaskToBin(tbin, tw, th);
       const segs = traceBinaryToSVGPath(tbin, tw, th);
       const svgText = buildSVG(segs, tw, th, wmm, hmm);
-      return { mode:'simple', lineCanvas, laserCanvas:null, svgText };
+      return { mode:'anime', lineCanvas, laserCanvas:null, svgText };
     }
   }
 
@@ -1224,7 +1330,7 @@
     const primary = computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm);
     let secondary = null;
     if(includeOtherMode){
-      const otherMode = lineArtMode === 'sketch' ? 'simple' : 'sketch';
+      const otherMode = lineArtMode === 'sketch' ? 'anime' : 'sketch';
       secondary = computeLineArtFull(otherMode, grayRaw, w, h, wmm, hmm);
     }
 
@@ -1248,18 +1354,19 @@
     setStatus('處理中，請稍候…（完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
     const layers = computeFullLayers(false);
-    if(key==='original'){ downloadBlob(await canvasToPNGBlob(layers.originalCanvas), 'original-cropped.png'); }
-    if(key==='gray'){ downloadBlob(await canvasToPNGBlob(layers.grayCanvas), 'gray-heightmap.png'); }
+    const {wmm, hmm} = layers;
+    if(key==='original'){ downloadBlob(await canvasToPNGBlob(composeOnA4(layers.originalCanvas, wmm, hmm)), 'original-cropped-A4.png'); }
+    if(key==='gray'){ downloadBlob(await canvasToPNGBlob(composeOnA4(layers.grayCanvas, wmm, hmm)), 'gray-heightmap-A4.png'); }
     if(key==='line'){
-      const fname = layers.primary.mode==='sketch' ? 'lineart-sketch.png' : 'lineart.png';
-      downloadBlob(await canvasToPNGBlob(layers.primary.lineCanvas), fname);
+      const fname = layers.primary.mode==='sketch' ? 'lineart-sketch-A4.png' : 'lineart-A4.png';
+      downloadBlob(await canvasToPNGBlob(composeOnA4(layers.primary.lineCanvas, wmm, hmm)), fname);
     }
     if(key==='linesvg'){ downloadBlob(new Blob([layers.primary.svgText],{type:'image/svg+xml'}), 'lineart.svg'); }
     if(key==='linelaser'){ downloadBlob(await canvasToPNGBlob(layers.primary.laserCanvas), 'lineart-sketch-laser.png'); }
-    if(key==='c'){ downloadBlob(await canvasToPNGBlob(layers.cCanvas), 'layer-cyan.png'); }
-    if(key==='m'){ downloadBlob(await canvasToPNGBlob(layers.mCanvas), 'layer-magenta.png'); }
-    if(key==='y'){ downloadBlob(await canvasToPNGBlob(layers.yCanvas), 'layer-yellow.png'); }
-    setStatus('完成，檔案已下載。');
+    if(key==='c'){ downloadBlob(await canvasToPNGBlob(composeOnA4(layers.cCanvas, wmm, hmm)), 'layer-cyan-A4.png'); }
+    if(key==='m'){ downloadBlob(await canvasToPNGBlob(composeOnA4(layers.mCanvas, wmm, hmm)), 'layer-magenta-A4.png'); }
+    if(key==='y'){ downloadBlob(await canvasToPNGBlob(composeOnA4(layers.yCanvas, wmm, hmm)), 'layer-yellow-A4.png'); }
+    setStatus('完成，檔案已下載（已排版於A4紙，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。');
   }
 
   document.getElementById('dlOriginalPng').addEventListener('click', ()=>exportSingle('original'));
@@ -1276,12 +1383,12 @@
   // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
   async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
 
-  async function addLineArtFilesToZip(files, layerSet){
-    if(layerSet.mode === 'simple'){
-      files['lineart.png'] = await toU8(await canvasToPNGBlob(layerSet.lineCanvas));
+  async function addLineArtFilesToZip(files, layerSet, wmm, hmm){
+    if(layerSet.mode === 'anime'){
+      files['lineart-A4.png'] = await toU8(await canvasToPNGBlob(composeOnA4(layerSet.lineCanvas, wmm, hmm)));
       files['lineart.svg'] = strToBytes(layerSet.svgText);
     } else {
-      files['lineart-sketch.png'] = await toU8(await canvasToPNGBlob(layerSet.lineCanvas));
+      files['lineart-sketch-A4.png'] = await toU8(await canvasToPNGBlob(composeOnA4(layerSet.lineCanvas, wmm, hmm)));
       files['lineart-sketch-laser.png'] = await toU8(await canvasToPNGBlob(layerSet.laserCanvas));
     }
   }
@@ -1293,36 +1400,39 @@
     await new Promise(r=>setTimeout(r,30));
     const includeOther = document.getElementById('zipIncludeBoth').checked;
     const layers = computeFullLayers(includeOther);
+    const {wmm, hmm} = layers;
     const [originalBlob, grayBlob, cBlob, mBlob, yBlob] = await Promise.all([
-      canvasToPNGBlob(layers.originalCanvas),
-      canvasToPNGBlob(layers.grayCanvas),
-      canvasToPNGBlob(layers.cCanvas),
-      canvasToPNGBlob(layers.mCanvas),
-      canvasToPNGBlob(layers.yCanvas),
+      canvasToPNGBlob(composeOnA4(layers.originalCanvas, wmm, hmm)),
+      canvasToPNGBlob(composeOnA4(layers.grayCanvas, wmm, hmm)),
+      canvasToPNGBlob(composeOnA4(layers.cCanvas, wmm, hmm)),
+      canvasToPNGBlob(composeOnA4(layers.mCanvas, wmm, hmm)),
+      canvasToPNGBlob(composeOnA4(layers.yCanvas, wmm, hmm)),
     ]);
     const files = {
-      'original-cropped.png': await toU8(originalBlob),
-      'gray-heightmap.png': await toU8(grayBlob),
-      'layer-cyan.png': await toU8(cBlob),
-      'layer-magenta.png': await toU8(mBlob),
-      'layer-yellow.png': await toU8(yBlob),
+      'original-cropped-A4.png': await toU8(originalBlob),
+      'gray-heightmap-A4.png': await toU8(grayBlob),
+      'layer-cyan-A4.png': await toU8(cBlob),
+      'layer-magenta-A4.png': await toU8(mBlob),
+      'layer-yellow-A4.png': await toU8(yBlob),
     };
-    await addLineArtFilesToZip(files, layers.primary);
-    if(layers.secondary) await addLineArtFilesToZip(files, layers.secondary);
+    await addLineArtFilesToZip(files, layers.primary, wmm, hmm);
+    if(layers.secondary) await addLineArtFilesToZip(files, layers.secondary, wmm, hmm);
 
     const modeNote = layers.secondary
-      ? `已同時包含「簡單線稿」與「素描風」兩種模式的線稿檔案。`
-      : `本次只包含目前選擇的線稿模式（${layers.primary.mode==='sketch'?'素描風':'簡單線稿'}），如需另一種模式請勾選「同時包含另一種線稿模式」後重新打包。`;
+      ? `已同時包含「日式似顏繪風格」與「素描風」兩種模式的線稿檔案。`
+      : `本次只包含目前選擇的線稿模式（${layers.primary.mode==='sketch'?'素描風':'日式似顏繪風格'}），如需另一種模式請勾選「同時包含另一種線稿模式」後重新打包。`;
     const readme = `照片轉線稿＋CMYK分層工具 — 輸出說明
 
-尺寸：${layers.wmm} x ${layers.hmm} mm（600 DPI，${layers.w} x ${layers.h} px）
+實際輸出尺寸：${layers.wmm} x ${layers.hmm} mm（600 DPI，${layers.w} x ${layers.h} px）
 
 檔案：
-- original-cropped.png：原始照片經裁切構圖後的彩色成品（未做任何線稿/分色處理），可作為排版對照或存檔備份使用。
-- gray-heightmap.png：灰階高度圖，供3D列印轉換浮雕層厚使用（白=亮/薄，黑=暗/厚，可於工具中反轉）；也可以直接用「⑥ 3D列印模型匯出」按鈕產生STL檔。
-- lineart.png / lineart.svg（簡單線稿模式）：PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。
-- lineart-sketch.png / lineart-sketch-laser.png（素描風模式）：一般PNG供列印/當熄燈裝飾層，laser版為雷射雕刻專用灰階點陣（深色=雕更深，如與您軟體慣例相反請在雷射軟體或本工具的反轉選項調整）。
-- layer-cyan.png / layer-magenta.png / layer-yellow.png：CMY調色透明片，供一般CMYK印表機列印在透明列印紙上，依序疊合、背光呈現全彩
+- original-cropped-A4.png：原始照片經裁切構圖後的彩色成品（未做任何線稿/分色處理），可作為排版對照或存檔備份使用。
+- gray-heightmap-A4.png：灰階高度圖，供3D列印轉換浮雕層厚使用（白=亮/薄，黑=暗/厚，可於工具中反轉）；也可以直接用「⑥ 3D列印模型匯出」按鈕產生STL檔。
+- lineart-A4.png / lineart.svg（日式似顏繪風格模式）：PNG供列印在透明片上，SVG供雷射雕刻使用（SVG座標單位為mm，可直接以實際尺寸匯入）。
+- lineart-sketch-A4.png / lineart-sketch-laser.png（素描風模式）：一般PNG供列印/當熄燈裝飾層，laser版為雷射雕刻專用灰階點陣（深色=雕更深，如與您軟體慣例相反請在雷射軟體或本工具的反轉選項調整）。
+- layer-cyan-A4.png / layer-magenta-A4.png / layer-yellow-A4.png：CMY調色透明片，供一般CMYK印表機列印在透明列印紙上，依序疊合、背光呈現全彩
+
+除了 SVG 與雷射雕刻專用灰階PNG外，所有 *-A4.png 檔案都已排版置中於A4紙（210×297mm），並統一預留${A4_MARGIN_MM}mm列印邊界，各圖層在A4紙上的位置與比例完全一致，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。
 
 ${modeNote}
 
