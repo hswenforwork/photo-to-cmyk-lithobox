@@ -171,7 +171,13 @@
 
         <label>似顏繪細緻度（負值簡化平塗、正值強化細節線條） <span class="value-pill" id="animeDetailVal">0</span></label>
         <input type="range" id="animeDetailRange" min="-100" max="100" value="0">
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「似顏繪細緻度」滑桿只是輕量後製調整（非AI，模糊/銳化的canvas運算），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI：往負值方向會讓畫面更簡化、更接近平塗色塊；往正值方向會加強線條與紋理細節的銳利度。<strong>下載/打包時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下的滑桿數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+        <label>色調（色相偏移） <span class="value-pill" id="animeHueVal">0</span></label>
+        <input type="range" id="animeHueRange" min="-180" max="180" value="0">
+        <label>色溫（負值偏冷藍、正值偏暖橘） <span class="value-pill" id="animeTempVal">0</span></label>
+        <input type="range" id="animeTempRange" min="-100" max="100" value="0">
+        <label>飽和度 <span class="value-pill" id="animeSatVal">0</span></label>
+        <input type="range" id="animeSatRange" min="-100" max="100" value="0">
+        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「似顏繪細緻度」「色調」「色溫」「飽和度」四個滑桿都只是輕量後製調整（非AI，皆為canvas運算），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI：細緻度往負值方向會讓畫面更簡化、更接近平塗色塊，往正值方向會加強線條與紋理細節的銳利度；色調會整體旋轉色相；色溫往負值會偏冷藍、往正值會偏暖橘；飽和度往負值會降低彩度（趨近灰階）、往正值會提高彩度。<strong>下載時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下四個滑桿的數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -241,28 +247,15 @@
       </div>
       <div class="row" id="litControls">
         <div>
-          <label>背光色溫</label>
-          <select id="backlightSelect">
-            <option value="white">白光 6500K</option>
-            <option value="warm" selected>暖光 3000K（常見LED燈條）</option>
-          </select>
-        </div>
-        <div>
-          <label>整體穿透衰減 <span class="value-pill" id="attenVal">25%</span></label>
-          <input type="range" id="attenRange" min="0" max="80" value="25">
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>邊緣暗角 <span class="value-pill" id="vignetteVal">30%</span></label>
-          <input type="range" id="vignetteRange" min="0" max="100" value="30">
+          <label>背光色溫（K） <span class="value-pill" id="backlightVal">3000K</span></label>
+          <input type="range" id="backlightRange" min="3000" max="6500" step="50" value="3000">
         </div>
         <div></div>
       </div>
       <div class="compositeCanvasWrap">
         <canvas id="compositeCanvas"></canvas>
       </div>
-      <div class="note">「熄燈」模擬燈箱最外層裝飾層在環境光下的樣子（會跟著下方④選的外層裝飾層風格切換）；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層裝飾層，並加上背光色溫、整體衰減與邊緣暗角，模擬實際LED背光穿透多層材料後偏柔和、偏暗的觀感。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
+      <div class="note">「熄燈」模擬燈箱最外層裝飾層在環境光下的樣子（會跟著下方④選的外層裝飾層風格切換）；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層裝飾層，並依背光色溫滑桿（3000K～6500K）換算實際色光後以色彩混合方式疊加，模擬LED背光穿透多層材料後的色偏。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
     </section>
 
     <section class="panel">
@@ -270,10 +263,8 @@
       <div class="btn-row">
         <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
-      <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
-      <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：RGB→CMYK採標準數值公式換算（K=1-max(R,G,B)等），本身不是經過ICC色彩管理的轉換；但PDF會內嵌「Japan Color 2011 Coated」印刷色域描述檔作為OutputIntent（首次下載時瀏覽器會另外下載約1.9MB的描述檔案，僅需一次），讓支援的印刷軟體/RIP知道這份CMYK數值對應的印刷條件依據，是業界常見的「印刷就緒PDF」宣告方式；描述檔下載失敗時仍會正常產生PDF，只是不含這項宣告。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：RGB→CMYK採標準數值公式換算（K=1-max(R,G,B)等），本身不是經過ICC色彩管理的轉換；但PDF會內嵌「Japan Color 2011 Coated」印刷色域描述檔作為OutputIntent（首次下載時瀏覽器會另外下載約1.9MB的描述檔案，僅需一次），讓支援的印刷軟體/RIP知道這份CMYK數值對應的印刷條件依據，是業界常見的「印刷就緒PDF」宣告方式；描述檔下載失敗時仍會正常產生PDF，只是不含這項宣告。若外層裝飾層使用日式似顏繪風格，下載一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -603,7 +594,6 @@
       mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
       resetAnimePreviewCache(); // 新照片，先前產生的日式似顏繪風格快取完全不適用了
       scheduleUpdate();
-      document.getElementById('dlZip').disabled = false;
     };
     image.src = url;
   }
@@ -994,51 +984,82 @@
     return resized;
   }
 
-  // 對「原始AI結果」套用似顏繪細緻度後製調整（負值簡化平塗／正值強化細節線條）。
-  // 這是輕量的canvas運算（非AI），因此滑桿拖曳時可即時重新套用，不必重新跑一次AI風格轉換：
+  // 對「原始AI結果」套用似顏繪細緻度／色調／色溫／飽和度後製調整。
+  // 全部都是輕量的canvas運算（非AI），因此滑桿拖曳時可即時重新套用，不必重新跑一次AI風格轉換：
   // - detail < 0：用ctx.filter的模糊濾鏡，讓畫面更簡化、更接近色塊平塗（|detail|越大越模糊）
   // - detail > 0：unsharp mask銳化（原圖 + (原圖-模糊版本)*強度），讓線條與紋理細節更銳利清晰
-  // - detail = 0：不做任何後製，直接回傳AI原始結果
+  // - hue／saturation：透過ctx.filter的hue-rotate()／saturate()一次套用色相旋轉與飽和度縮放
+  // - temp：簡單的R/B通道線性位移，模擬冷／暖偏色（非物理色溫換算，但足以做視覺微調）
+  // 四個滑桿皆為0時不做任何後製，直接回傳AI原始結果
   function applyAnimeAdjustments(rawCanvas, targetW, targetH){
     const detail = +document.getElementById('animeDetailRange').value;
+    const hue = +document.getElementById('animeHueRange').value;
+    const temp = +document.getElementById('animeTempRange').value;
+    const sat = +document.getElementById('animeSatRange').value;
 
     const base = document.createElement('canvas');
     base.width = targetW; base.height = targetH;
     const bctx = base.getContext('2d');
     bctx.drawImage(rawCanvas, 0, 0, targetW, targetH); // 明確指定目的寬高：來源canvas尺寸可能與目的不同，省略會只貼在左上角一小塊
-    if(detail === 0) return base;
 
-    const shortEdge = Math.min(targetW, targetH);
-    if(detail < 0){
-      const blurPx = (-detail/100) * shortEdge * 0.01;
+    let current = base;
+
+    if(detail !== 0){
+      const shortEdge = Math.min(targetW, targetH);
+      if(detail < 0){
+        const blurPx = (-detail/100) * shortEdge * 0.01;
+        const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
+        const octx = out.getContext('2d');
+        octx.filter = `blur(${blurPx}px)`;
+        octx.drawImage(current, 0, 0);
+        current = out;
+      } else {
+        const blurPx = shortEdge * 0.006;
+        const blurred = document.createElement('canvas'); blurred.width = targetW; blurred.height = targetH;
+        const brctx = blurred.getContext('2d');
+        brctx.filter = `blur(${blurPx}px)`;
+        brctx.drawImage(current, 0, 0);
+
+        const curData = current.getContext('2d').getImageData(0,0,targetW,targetH);
+        const blurData = brctx.getImageData(0,0,targetW,targetH);
+        const amount = (detail/100) * 1.5;
+        const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
+        const octx = out.getContext('2d');
+        const outImg = octx.createImageData(targetW,targetH);
+        const bd = curData.data, ld = blurData.data, od = outImg.data;
+        for(let i=0;i<bd.length;i+=4){
+          od[i]   = Math.max(0, Math.min(255, bd[i]   + (bd[i]  -ld[i])  *amount));
+          od[i+1] = Math.max(0, Math.min(255, bd[i+1] + (bd[i+1]-ld[i+1])*amount));
+          od[i+2] = Math.max(0, Math.min(255, bd[i+2] + (bd[i+2]-ld[i+2])*amount));
+          od[i+3] = 255;
+        }
+        octx.putImageData(outImg,0,0);
+        current = out;
+      }
+    }
+
+    if(hue !== 0 || sat !== 0){
+      const satPercent = Math.max(0, 100 + sat); // sat: -100~100 對應 0%~200% 飽和度
       const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
       const octx = out.getContext('2d');
-      octx.filter = `blur(${blurPx}px)`;
-      octx.drawImage(base, 0, 0);
-      return out;
+      octx.filter = `hue-rotate(${hue}deg) saturate(${satPercent}%)`;
+      octx.drawImage(current, 0, 0);
+      current = out;
     }
 
-    const blurPx = shortEdge * 0.006;
-    const blurred = document.createElement('canvas'); blurred.width = targetW; blurred.height = targetH;
-    const brctx = blurred.getContext('2d');
-    brctx.filter = `blur(${blurPx}px)`;
-    brctx.drawImage(base, 0, 0);
-
-    const baseData = bctx.getImageData(0,0,targetW,targetH);
-    const blurData = brctx.getImageData(0,0,targetW,targetH);
-    const amount = (detail/100) * 1.5;
-    const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
-    const octx = out.getContext('2d');
-    const outImg = octx.createImageData(targetW,targetH);
-    const bd = baseData.data, ld = blurData.data, od = outImg.data;
-    for(let i=0;i<bd.length;i+=4){
-      od[i]   = Math.max(0, Math.min(255, bd[i]   + (bd[i]  -ld[i])  *amount));
-      od[i+1] = Math.max(0, Math.min(255, bd[i+1] + (bd[i+1]-ld[i+1])*amount));
-      od[i+2] = Math.max(0, Math.min(255, bd[i+2] + (bd[i+2]-ld[i+2])*amount));
-      od[i+3] = 255;
+    if(temp !== 0){
+      const cctx = current.getContext('2d');
+      const imgData = cctx.getImageData(0,0,targetW,targetH);
+      const d = imgData.data;
+      const shift = (temp/100) * 40; // 最大約±40的通道位移，正值加暖（提高R、降低B），負值加冷
+      for(let i=0;i<d.length;i+=4){
+        d[i]   = Math.max(0, Math.min(255, d[i]   + shift));
+        d[i+2] = Math.max(0, Math.min(255, d[i+2] - shift));
+      }
+      cctx.putImageData(imgData,0,0);
     }
-    octx.putImageData(outImg,0,0);
-    return out;
+
+    return current;
   }
 
   function renderAnimeCanvas(resizedCanvas, wmm, hmm){
@@ -1446,6 +1467,21 @@
     document.getElementById('animeDetailVal').textContent = animeDetailRangeEl.value;
     refreshAnimeAdjustmentsOnly();
   });
+  const animeHueRangeEl = document.getElementById('animeHueRange');
+  animeHueRangeEl.addEventListener('input', ()=>{
+    document.getElementById('animeHueVal').textContent = animeHueRangeEl.value;
+    refreshAnimeAdjustmentsOnly();
+  });
+  const animeTempRangeEl = document.getElementById('animeTempRange');
+  animeTempRangeEl.addEventListener('input', ()=>{
+    document.getElementById('animeTempVal').textContent = animeTempRangeEl.value;
+    refreshAnimeAdjustmentsOnly();
+  });
+  const animeSatRangeEl = document.getElementById('animeSatRange');
+  animeSatRangeEl.addEventListener('input', ()=>{
+    document.getElementById('animeSatVal').textContent = animeSatRangeEl.value;
+    refreshAnimeAdjustmentsOnly();
+  });
 
   function runPreview(){
     if(!img) return;
@@ -1516,6 +1552,35 @@
     });
   });
 
+  // 色溫(K)轉近似RGB光色（Tanner Helland演算法的常見實作），用於模擬背光燈條的實際色光，
+  // 3000K附近偏暖橘、6500K附近接近白光
+  function kelvinToRgb(kelvin){
+    const temp = kelvin / 100;
+    let r, g, b;
+    if(temp <= 66){
+      r = 255;
+    } else {
+      r = 329.698727446 * Math.pow(temp - 60, -0.1332047592);
+    }
+    if(temp <= 66){
+      g = 99.4708025861 * Math.log(temp) - 161.1195681661;
+    } else {
+      g = 288.1221695283 * Math.pow(temp - 60, -0.0755148492);
+    }
+    if(temp >= 66){
+      b = 255;
+    } else if(temp <= 19){
+      b = 0;
+    } else {
+      b = 138.5177312231 * Math.log(temp - 10) - 305.0447927307;
+    }
+    return {
+      r: Math.max(0, Math.min(255, r)),
+      g: Math.max(0, Math.min(255, g)),
+      b: Math.max(0, Math.min(255, b)),
+    };
+  }
+
   function renderComposite(){
     if(!lastPreviewLayers || !lastPreviewLayers.lineCanvas) return;
     const {w,h,grayCanvas,lineCanvas,cCanvas,mCanvas,yCanvas} = lastPreviewLayers;
@@ -1530,9 +1595,7 @@
       ctx.drawImage(lineCanvas,0,0);
       ctx.globalAlpha = 1;
     } else {
-      const backlight = document.getElementById('backlightSelect').value;
-      const vignette = +document.getElementById('vignetteRange').value / 100;
-      const atten = +document.getElementById('attenRange').value / 100;
+      const backlightK = +document.getElementById('backlightRange').value;
 
       const off = document.createElement('canvas'); off.width=w; off.height=h;
       const octx = off.getContext('2d');
@@ -1549,23 +1612,11 @@
       ctx.clearRect(0,0,w,h);
       ctx.drawImage(off,0,0);
 
-      if(backlight === 'warm'){
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = 'rgba(255,214,160,1)';
-        ctx.fillRect(0,0,w,h);
-        ctx.globalCompositeOperation = 'source-over';
-      }
-      if(atten > 0){
-        ctx.fillStyle = `rgba(0,0,0,${atten})`;
-        ctx.fillRect(0,0,w,h);
-      }
-      if(vignette > 0){
-        const grad = ctx.createRadialGradient(w/2,h/2, Math.min(w,h)*0.3, w/2,h/2, Math.max(w,h)*0.72);
-        grad.addColorStop(0,'rgba(0,0,0,0)');
-        grad.addColorStop(1,`rgba(0,0,0,${vignette})`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,w,h);
-      }
+      const tint = kelvinToRgb(backlightK);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgb(${Math.round(tint.r)},${Math.round(tint.g)},${Math.round(tint.b)})`;
+      ctx.fillRect(0,0,w,h);
+      ctx.globalCompositeOperation = 'source-over';
     }
   }
 
@@ -1589,13 +1640,8 @@
   });
   document.getElementById('invertHeight').addEventListener('change', scheduleUpdate);
 
-  document.getElementById('backlightSelect').addEventListener('change', renderComposite);
-  document.getElementById('attenRange').addEventListener('input', e=>{
-    document.getElementById('attenVal').textContent = e.target.value+'%';
-    renderComposite();
-  });
-  document.getElementById('vignetteRange').addEventListener('input', e=>{
-    document.getElementById('vignetteVal').textContent = e.target.value+'%';
+  document.getElementById('backlightRange').addEventListener('input', e=>{
+    document.getElementById('backlightVal').textContent = e.target.value+'K';
     renderComposite();
   });
 
@@ -1654,7 +1700,7 @@
 
   // 依序產生每個列印圖層（每次只讓一份全解析度來源圖層與頁面canvas同時留在記憶體，畫入頁面後立即釋放來源圖層），
   // 並自動排版到儘量少的A4頁面；statusCb(msg) 可選，用於回報目前處理到哪個圖層
-  async function generatePrintPages(includeOtherMode, statusCb){
+  async function generatePrintPages(statusCb){
     const {w,h,wmm,hmm} = fullPixelSize();
     // 每張列印圖層實際佔用的物理尺寸＝步驟①輸出尺寸外擴出血邊（見PRINT_BLEED_MM），A4排版要用這個外擴後的尺寸計算
     const printWmm = wmm + 2*PRINT_BLEED_MM, printHmm = hmm + 2*PRINT_BLEED_MM;
@@ -1671,18 +1717,14 @@
     const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
     const grayRaw = toGray(imageData);
 
-    let primary = null, secondary = null;
+    let primary = null;
     const modeLabel = m => m==='sketch' ? '外層裝飾層－素描風' : '外層裝飾層－日式似顏繪風格';
-    const otherMode = lineArtMode === 'sketch' ? 'anime' : 'sketch';
 
     const jobs = [
       { label:'原始照片', make: () => renderOriginalPrintCanvas(imageData, w, h, wmm, hmm) },
       { label:'灰階高度圖', make: () => renderGrayPrintCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
       { label: modeLabel(lineArtMode), make: async () => { primary = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm); return primary.lineCanvas; } },
     ];
-    if(includeOtherMode){
-      jobs.push({ label: modeLabel(otherMode), make: async () => { secondary = await computeLineArtFull(otherMode, grayRaw, w, h, wmm, hmm); return secondary.lineCanvas; } });
-    }
     jobs.push({ label:'Cyan版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'c', cS) });
     jobs.push({ label:'Magenta版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'm', mS) });
     jobs.push({ label:'Yellow版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'y', yS) });
@@ -1714,7 +1756,7 @@
     }
     pages.push(curPage);
 
-    return { pages, primary, secondary, w, h, wmm, hmm };
+    return { pages, primary, w, h, wmm, hmm };
   }
 
   function downloadBlob(blob, filename){
@@ -1914,7 +1956,7 @@
         console.warn('CMYK印刷色域描述檔載入失敗，PDF將不包含OutputIntent（不影響其餘功能）', err);
         return null;
       });
-      const { pages } = await generatePrintPages(false, setStatus);
+      const { pages } = await generatePrintPages(setStatus);
       const iccProfileBytes = await iccPromise;
       setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
       await new Promise(r=>setTimeout(r,0));
@@ -1924,67 +1966,6 @@
       setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩${iccProfileBytes ? '，已嵌入Japan Color 2011 Coated色域描述檔' : ''}，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
     } catch(err){
       setStatus('產生列印頁面失敗：'+err.message);
-      console.error(err);
-    }
-  });
-
-  // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
-  async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
-
-  document.getElementById('dlZip').addEventListener('click', async ()=>{
-    if(!img){ setStatus('請先上傳照片。'); return; }
-    if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js），請確認 assets 資料夾已一併部署。'); return; }
-    const includeOther = document.getElementById('zipIncludeBoth').checked;
-    const otherMode = lineArtMode === 'sketch' ? 'anime' : 'sketch';
-    const readyPrimary = animeCacheReadyFor(lineArtMode);
-    if(!readyPrimary.ok){ setStatus(readyPrimary.reason); return; }
-    if(includeOther){
-      const readySecondary = animeCacheReadyFor(otherMode);
-      if(!readySecondary.ok){ setStatus(readySecondary.reason); return; }
-    }
-    setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（使用已產生的圖層進行排版／輸出／打包）');
-    await new Promise(r=>setTimeout(r,30));
-    try{
-      // 跟排版工作平行下載CMYK印刷色域描述檔，避免序列等待拖慢整體時間；描述檔下載失敗不會擋下
-      // 整個PDF產生流程，只是輸出的PDF不含OutputIntent（仍是完全有效的CMYK PDF）
-      const iccPromise = ensureIccProfile(setStatus).catch(err=>{
-        console.warn('CMYK印刷色域描述檔載入失敗，PDF將不包含OutputIntent（不影響其餘功能）', err);
-        return null;
-      });
-      const { pages, primary, secondary, wmm, hmm, w, h } = await generatePrintPages(includeOther, setStatus);
-      const iccProfileBytes = await iccPromise;
-
-      setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
-      await new Promise(r=>setTimeout(r,0));
-      const pdfBlob = pagesToPdfBlob(pages, iccProfileBytes);
-      for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
-
-      const files = {};
-      files['print-pages.pdf'] = await toU8(pdfBlob);
-
-      const modeNote = secondary
-        ? `已同時包含「日式似顏繪風格」與「素描風」兩種外層裝飾層模式的檔案。`
-        : `本次只包含目前選擇的外層裝飾層模式（${primary.mode==='sketch'?'素描風':'日式似顏繪風格'}），如需另一種模式請勾選「同時包含另一種外層裝飾層模式」後重新打包。`;
-      const readme = `照片轉線稿＋CMYK分層工具 — 輸出說明
-
-實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
-
-檔案：
-- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在出血邊正中央（距離外擴後邊界${PRINT_MARK_INSET_MM}mm處），跟3D列印底板的四角對位孔位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿步驟①設定的原始輸出尺寸邊界（對位十字內側${PRINT_MARK_INSET_MM}mm處）裁切即可，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值本身是標準公式換算，並內嵌「Japan Color 2011 Coated」印刷色域描述檔作為PDF的OutputIntent（取自ICC色彩描述檔登錄資料庫 https://registry.color.org/profile-registry/JapanColor2011Coated ，授權允許使用/嵌入PDF/交換/分享），讓支援的印刷軟體/RIP知道CMYK數值的印刷條件依據。
-
-${modeNote}
-
-若有開啟「主體遮罩」（含AI自動偵測），外層裝飾層只會保留標記範圍內的主體（範圍外呈現白底/白紙）。
-
-日式似顏繪風格所使用的CartoonGAN模型權重（宮崎駿吉卜力風/細田守風/今敏風/新海誠風）採MIT授權，向原作者 Yijun Li 等人致謝：https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch
-`;
-      files['README.txt'] = strToBytes(readme);
-      const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PDF內圖片已用FlateDecode壓縮過，不需再壓一次
-      const zipBlob = new Blob([zipped], {type:'application/zip'});
-      downloadBlob(zipBlob, 'photo-lithobox-layers.zip');
-      setStatus(`完成，ZIP 已下載，內含 ${Object.keys(files).length} 個檔案（含說明文件）。`);
-    } catch(err){
-      setStatus('打包失敗：'+err.message);
       console.error(err);
     }
   });
