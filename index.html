@@ -169,15 +169,9 @@
         <button class="btn primary" id="animeGenerateBtn" type="button">🎨 產生／更新日式似顏繪風格預覽</button>
         <div class="dimHint" id="animeStatus"></div>
 
-        <label>風格強度（與原照片混合） <span class="value-pill" id="animeIntensityVal">100%</span></label>
-        <input type="range" id="animeIntensityRange" min="0" max="100" value="100">
-        <label>亮度 <span class="value-pill" id="animeBrightVal">0</span></label>
-        <input type="range" id="animeBrightRange" min="-100" max="100" value="0">
-        <label>對比 <span class="value-pill" id="animeContrastVal">0</span></label>
-        <input type="range" id="animeContrastRange" min="-100" max="100" value="0">
-        <label>飽和度 <span class="value-pill" id="animeSaturateVal">0</span></label>
-        <input type="range" id="animeSaturateRange" min="-100" max="100" value="0">
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「風格強度／亮度／對比／飽和度」四個滑桿只是輕量後製調整（非AI），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI。<strong>下載/打包時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下的滑桿數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+        <label>似顏繪細緻度（負值簡化平塗、正值強化細節線條） <span class="value-pill" id="animeDetailVal">0</span></label>
+        <input type="range" id="animeDetailRange" min="-100" max="100" value="0">
+        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「似顏繪細緻度」滑桿只是輕量後製調整（非AI，模糊/銳化的canvas運算），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI：往負值方向會讓畫面更簡化、更接近平塗色塊；往正值方向會加強線條與紋理細節的銳利度。<strong>下載/打包時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下的滑桿數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -274,14 +268,12 @@
     <section class="panel">
       <h2>⑤ 下載列印圖層</h2>
       <div class="btn-row">
-        <button class="btn primary" id="dlPrintPages">下載列印頁面 PNG（自動排版於A4）</button>
-        <button class="btn" id="dlLineLaser">外層裝飾層 雷射雕刻灰階PNG</button>
+        <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
-      <label style="margin-top:8px;" id="laserInvertWrap"><input type="checkbox" id="laserInvert" style="width:auto; display:inline-block; margin-right:6px;">雷射雕刻灰階PNG反轉黑白（依您雷射雕刻軟體的深淺慣例調整，多數軟體「深色=雕更深」）</label>
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁；圖面本身不含任何文字標籤，四角皆有「十字線＋打孔圓點同心對位記號」，方便疊合裁切、打孔對位。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸。雷射雕刻專用灰階PNG維持原始尺寸單獨下載，不參與A4排版。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）改畫在這個外擴後的新邊界，換算下來恰好落在原始輸出尺寸的邊界上；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿對位十字所在的原始尺寸邊界裁切即為步驟①設定的實際輸出尺寸。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：目前是標準數值換算（K=1-max(R,G,B)等公式），並未嵌入印刷廠專用的ICC色彩描述檔（如SWOP、Fogra、Japan Color等），所以是裝置獨立的近似CMYK值，不是經過特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準，請自行在印刷軟體/RIP端指定描述檔。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -331,13 +323,36 @@
     "5x3.5": { wmm: 5*25.4, hmm: 3.5*25.4 }
   };
   const MARK_INSET_MM = 5; // 對位十字＋打孔記號距離頁面邊界的固定距離（mm）
+  // 下載/匯出的列印圖層會在步驟①輸出尺寸（wmm×hmm）外緣再外擴這個距離作為出血邊，
+  // 內容仍是原始wmm×hmm、置中；對位十字＋打孔記號改成距離這個外擴後的新邊界inset(=MARK_INSET_MM)，
+  // 換算下來十字記號恰好會落在原始wmm×hmm邊界上（外擴距離與inset距離相同）。只影響下載/匯出，不影響畫面即時預覽。
+  const PRINT_BLEED_MM = 5;
+  const HOLE_DIAMETER_MM = 3; // 對位打孔圓點的固定實際直徑（不隨解析度變化，僅換算px）
+  // 3D列印STL底板：比照列印圖層的出血邊精神，底板也在步驟①輸出尺寸外緣外擴STL_BLEED_MM，
+  // 四角開直徑STL_HOLE_DIAMETER_MM的圓孔，供組裝時穿螺絲/銷釘對齊各圖層。
+  // STL_HOLE_INSET_MM刻意選在出血邊寬度的中點（而非跟紙本對位記號一樣直接等於STL_BLEED_MM），
+  // 確保整個圓孔（半徑=直徑/2）完全落在平坦的出血邊內、不會跟中央浮雕實體的邊界重疊，
+  // 這樣才能形成真正貫穿底板的乾淨孔洞（若嚴格對齊到浮雕邊界，孔洞會有一半落在浮雕實體上，無法乾淨穿孔）。
+  const STL_BLEED_MM = 5;
+  const STL_HOLE_DIAMETER_MM = 3;
+  const STL_HOLE_INSET_MM = STL_BLEED_MM / 2;
+  const STL_HOLE_CELL_SIZE_MM = 0.15; // 圓孔用細格點陣近似的格子邊長，越小圓孔越平滑但三角形數量越多
   const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
   const A4_PORTRAIT_WMM = 210, A4_PORTRAIT_HMM = 297; // A4紙直向尺寸
   const A4_MARGIN_MM = 5; // A4紙下載列印圖層預留的列印邊界
   // 日式似顏繪風格AI運算固定使用這個工作解析度（預覽與下載/匯出都一樣），運算後再放大至實際輸出像素尺寸。
   // 刻意讓預覽與匯出用「同一個」工作解析度，匯出時才能直接沿用預覽已經算好的結果、不必重新觸發AI，
-  // 也避免因為改用不同尺寸而讓WebGL重新編譯著色器（某些顯示卡/驅動在編譯特定尺寸的著色器時會失敗）
-  const ANIME_WORK_MAX = 320;
+  // 也避免因為改用不同尺寸而讓WebGL重新編譯著色器（某些顯示卡/驅動在編譯特定尺寸的著色器時會失敗）。
+  //
+  // 512px是實測後的選擇，而非原本設想的720px：在沒有真實GPU加速、退回WASM backend的最差情況下
+  // （本機沙箱環境單次推論實測），320/512/720/1024px分別約需11/23/46/94秒，看起來720px仍在
+  // ANIME_STYLIZE_TIMEOUT_MS(120秒)的安全範圍內；但進一步測試「連續按產生／更新預覽多次」
+  // （使用者實際調整裁切/風格時的正常操作模式）發現720px與1024px會逐次變慢並最終卡死
+  // （WASM linear memory只會成長不會釋放，大尺寸推論反覆執行會持續累積，最終讓分頁失去回應），
+  // 而512px連續5次都穩定維持在約28秒、不再繼續變慢。因此改採512px：仍比原本的320px提供更多
+  // 細節，同時避開了重複使用時的卡死風險。若之後要挑戰更高解析度，必須先解決WASM記憶體只增不減
+  // 的問題（例如定期重建tf引擎/backend），而不能只單純調高這個常數。
+  const ANIME_WORK_MAX = 512;
   const ANIME_MODEL_LOAD_TIMEOUT_MS = 60000;  // AI模型下載逾時上限
   const ANIME_STYLIZE_TIMEOUT_MS = 120000;    // 單次AI風格轉換運算逾時上限，避免瀏覽器/顯示卡當機時無限期卡住、沒有任何提示
   const SCRIPT_LOAD_TIMEOUT_MS = 30000;       // 動態載入.js/.wasm等執行檔的逾時上限
@@ -924,7 +939,7 @@
     return applyCrossHatch(base, w, h, spacing, hatchStrengthPct);
   }
 
-  function renderSketchCanvas(sketchGray, w, h, wmm, hmm, markColor){
+  function sketchContentCanvas(sketchGray, w, h){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -933,23 +948,17 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,wmm,hmm, markColor || 'rgba(150,70,255,0.85)');
     return c;
   }
-
-  // 雷射雕刻專用灰階點陣：與一般PNG同一份濃淡資料，但對位記號改用純黑（避免彩色標記干擾雷射軟體判讀灰階深度），並可選反轉黑白
-  function renderSketchLaserCanvas(sketchGray, w, h, wmm, hmm, invert){
-    const c = document.createElement('canvas'); c.width=w; c.height=h;
-    const ctx = c.getContext('2d');
-    const id = ctx.createImageData(w,h);
-    for(let i=0;i<sketchGray.length;i++){
-      let v = Math.max(0, Math.min(255, sketchGray[i]));
-      if(invert) v = 255-v;
-      id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
-    }
-    ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(0,0,0,0.9)');
+  // 即時預覽用
+  function renderSketchCanvas(sketchGray, w, h, wmm, hmm, markColor){
+    const c = sketchContentCanvas(sketchGray, w, h);
+    drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm, markColor || 'rgba(150,70,255,0.85)');
     return c;
+  }
+  // 下載/匯出用：外擴出血邊
+  function renderSketchPrintCanvas(sketchGray, w, h, wmm, hmm, markColor){
+    return addPrintBleed(sketchContentCanvas(sketchGray, w, h), wmm, hmm, markColor || 'rgba(150,70,255,0.85)');
   }
 
   // 遮罩外區域填白（用於全彩AI風格圖層：只呈現主體，忽略背景），直接在原canvas上繪製並回傳
@@ -980,32 +989,50 @@
     return resized;
   }
 
-  // 對「原始AI結果」套用風格強度（與原照片混合的不透明度）、亮度／對比／飽和度後製調整。
-  // 這些調整都是輕量的canvas運算（非AI），因此滑桿拖曳時可即時重新套用，不必重新跑一次AI風格轉換
+  // 對「原始AI結果」套用似顏繪細緻度後製調整（負值簡化平塗／正值強化細節線條）。
+  // 這是輕量的canvas運算（非AI），因此滑桿拖曳時可即時重新套用，不必重新跑一次AI風格轉換：
+  // - detail < 0：用ctx.filter的模糊濾鏡，讓畫面更簡化、更接近色塊平塗（|detail|越大越模糊）
+  // - detail > 0：unsharp mask銳化（原圖 + (原圖-模糊版本)*強度），讓線條與紋理細節更銳利清晰
+  // - detail = 0：不做任何後製，直接回傳AI原始結果
   function applyAnimeAdjustments(rawCanvas, targetW, targetH){
-    const intensity = +document.getElementById('animeIntensityRange').value;
-    const brightness = +document.getElementById('animeBrightRange').value;
-    const contrast = +document.getElementById('animeContrastRange').value;
-    const saturation = +document.getElementById('animeSaturateRange').value;
+    const detail = +document.getElementById('animeDetailRange').value;
 
-    const blended = document.createElement('canvas');
-    blended.width = targetW; blended.height = targetH;
-    const bctx = blended.getContext('2d');
-    if(intensity < 100){
-      // 強度<100%時，底下先貼原始裁切照片，AI風格化結果疊在上面用「不透明度=強度」混合
-      const originalCanvas = getCroppedCanvas(targetW, targetH);
-      bctx.drawImage(originalCanvas, 0, 0);
-    }
-    bctx.globalAlpha = Math.max(0, Math.min(100, intensity)) / 100;
+    const base = document.createElement('canvas');
+    base.width = targetW; base.height = targetH;
+    const bctx = base.getContext('2d');
     bctx.drawImage(rawCanvas, 0, 0, targetW, targetH); // 明確指定目的寬高：來源canvas尺寸可能與目的不同，省略會只貼在左上角一小塊
-    bctx.globalAlpha = 1;
+    if(detail === 0) return base;
 
-    if(brightness === 0 && contrast === 0 && saturation === 0) return blended;
-    const out = document.createElement('canvas');
-    out.width = targetW; out.height = targetH;
+    const shortEdge = Math.min(targetW, targetH);
+    if(detail < 0){
+      const blurPx = (-detail/100) * shortEdge * 0.01;
+      const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
+      const octx = out.getContext('2d');
+      octx.filter = `blur(${blurPx}px)`;
+      octx.drawImage(base, 0, 0);
+      return out;
+    }
+
+    const blurPx = shortEdge * 0.006;
+    const blurred = document.createElement('canvas'); blurred.width = targetW; blurred.height = targetH;
+    const brctx = blurred.getContext('2d');
+    brctx.filter = `blur(${blurPx}px)`;
+    brctx.drawImage(base, 0, 0);
+
+    const baseData = bctx.getImageData(0,0,targetW,targetH);
+    const blurData = brctx.getImageData(0,0,targetW,targetH);
+    const amount = (detail/100) * 1.5;
+    const out = document.createElement('canvas'); out.width = targetW; out.height = targetH;
     const octx = out.getContext('2d');
-    octx.filter = `brightness(${1+brightness/100}) contrast(${1+contrast/100}) saturate(${1+saturation/100})`;
-    octx.drawImage(blended, 0, 0);
+    const outImg = octx.createImageData(targetW,targetH);
+    const bd = baseData.data, ld = blurData.data, od = outImg.data;
+    for(let i=0;i<bd.length;i+=4){
+      od[i]   = Math.max(0, Math.min(255, bd[i]   + (bd[i]  -ld[i])  *amount));
+      od[i+1] = Math.max(0, Math.min(255, bd[i+1] + (bd[i+1]-ld[i+1])*amount));
+      od[i+2] = Math.max(0, Math.min(255, bd[i+2] + (bd[i+2]-ld[i+2])*amount));
+      od[i+3] = 255;
+    }
+    octx.putImageData(outImg,0,0);
     return out;
   }
 
@@ -1017,23 +1044,9 @@
     drawAlignmentMarks(ctx, w, h, wmm, hmm, 'rgba(0,0,0,0.55)');
     return c;
   }
-
-  // 全彩風格圖層的雷射雕刻灰階版：轉換為亮度灰階，對位記號改用純黑，並可選反轉黑白
-  function renderAnimeLaserCanvas(resizedCanvas, wmm, hmm, invert){
-    const w = resizedCanvas.width, h = resizedCanvas.height;
-    const c = document.createElement('canvas'); c.width=w; c.height=h;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(resizedCanvas, 0, 0);
-    const id = ctx.getImageData(0,0,w,h);
-    const d = id.data;
-    for(let i=0;i<d.length;i+=4){
-      let v = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-      if(invert) v = 255-v;
-      d[i]=v; d[i+1]=v; d[i+2]=v;
-    }
-    ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx, w, h, wmm, hmm, 'rgba(0,0,0,0.9)');
-    return c;
+  // 下載/匯出用：外擴出血邊（resizedCanvas已經是純內容、無對位記號）
+  function renderAnimePrintCanvas(resizedCanvas, wmm, hmm){
+    return addPrintBleed(resizedCanvas, wmm, hmm, 'rgba(0,0,0,0.55)');
   }
 
   // 依目前選中的外層裝飾層模式，計算「熄燈裝飾層」的預覽用canvas（低解析度，供即時預覽/合成預覽使用）
@@ -1064,7 +1077,7 @@
     }
   }
 
-  // 依指定模式（可能與目前UI選中的不同，供ZIP「同時包含另一模式」使用）計算完整解析度的外層裝飾層輸出組合
+  // 依指定模式（可能與目前UI選中的不同，供ZIP「同時包含另一模式」使用）計算完整解析度的外層裝飾層輸出
   async function computeLineArtFull(mode, grayRaw, w, h, wmm, hmm){
     if(mode === 'sketch'){
       const shade = +document.getElementById('sketchShadeRange').value;
@@ -1072,11 +1085,9 @@
       const strength = +document.getElementById('sketchStrengthRange').value;
       const sketchGray = computeSketchGray(grayRaw, w, h, shade, hatch, strength);
       const masked = applyMaskToGray(sketchGray, w, h, 255);
-      const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'sketch',
-        lineCanvas: renderSketchCanvas(masked, w, h, wmm, hmm),
-        laserCanvas: renderSketchLaserCanvas(masked, w, h, wmm, hmm, invert)
+        lineCanvas: renderSketchPrintCanvas(masked, w, h, wmm, hmm)
       };
     } else {
       // 下載/匯出永遠不會重新呼叫AI：只直接沿用「產生／更新預覽」按鈕已經算好、且仍對應目前設定的快取結果放大使用。
@@ -1090,11 +1101,9 @@
       cached.width = w; cached.height = h;
       cached.getContext('2d').drawImage(animeRawCache.canvas, 0, 0, w, h);
       const adjusted = applyAnimeAdjustments(cached, w, h);
-      const invert = document.getElementById('laserInvert').checked;
       return {
         mode:'anime',
-        lineCanvas: renderAnimeCanvas(adjusted, wmm, hmm),
-        laserCanvas: renderAnimeLaserCanvas(adjusted, wmm, hmm, invert)
+        lineCanvas: renderAnimePrintCanvas(adjusted, wmm, hmm)
       };
     }
   }
@@ -1106,7 +1115,7 @@
     const pxPerMm = w / wmm;
     const inset = MARK_INSET_MM * pxPerMm;
     const crossLen = 3 * pxPerMm;
-    const dotR = 0.9 * pxPerMm;
+    const dotR = (HOLE_DIAMETER_MM/2) * pxPerMm; // 固定實際直徑3mm的打孔圓點，不隨畫面解析度縮放比例改變
     const corners = [ [inset,inset], [w-inset,inset], [inset,h-inset], [w-inset,h-inset] ];
     ctx.save();
     ctx.strokeStyle = color;
@@ -1124,7 +1133,23 @@
     ctx.restore();
   }
 
-  function renderGrayCanvas(gray, w, h, wmm, hmm, invert){
+  // 下載/匯出專用：把已經畫好的內容canvas（尺寸=wmm×hmm）放進一張外擴PRINT_BLEED_MM的新畫布正中央
+  // （四周留白），並在新畫布的外緣重新畫上對位十字＋打孔記號——換算後這些記號會恰好落在原始wmm×hmm
+  // 內容的邊界上，外擴的部分純粹是列印/裁切用的出血邊。只用於下載/匯出，不影響畫面即時預覽。
+  function addPrintBleed(contentCanvas, wmm, hmm, markColor){
+    const outWmm = wmm + 2*PRINT_BLEED_MM, outHmm = hmm + 2*PRINT_BLEED_MM;
+    const outW = mmToPx(outWmm, DPI), outH = mmToPx(outHmm, DPI);
+    const c = document.createElement('canvas'); c.width = outW; c.height = outH;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,outW,outH);
+    const offX = mmToPx(PRINT_BLEED_MM, DPI), offY = mmToPx(PRINT_BLEED_MM, DPI);
+    ctx.drawImage(contentCanvas, offX, offY, mmToPx(wmm,DPI), mmToPx(hmm,DPI));
+    drawAlignmentMarks(ctx, outW, outH, outWmm, outHmm, markColor);
+    return c;
+  }
+
+  function grayContentCanvas(gray, w, h, invert){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
     const id = ctx.createImageData(w,h);
@@ -1134,11 +1159,20 @@
       id.data[i*4]=v; id.data[i*4+1]=v; id.data[i*4+2]=v; id.data[i*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(255,0,0,0.7)');
     return c;
   }
+  // 即時預覽用：內容尺寸=wmm×hmm，對位記號在原始inset位置
+  function renderGrayCanvas(gray, w, h, wmm, hmm, invert){
+    const c = grayContentCanvas(gray, w, h, invert);
+    drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm,'rgba(255,0,0,0.7)');
+    return c;
+  }
+  // 下載/匯出用：外擴PRINT_BLEED_MM出血邊＋對位記號在新邊界inset位置
+  function renderGrayPrintCanvas(gray, w, h, wmm, hmm, invert){
+    return addPrintBleed(grayContentCanvas(gray, w, h, invert), wmm, hmm, 'rgba(255,0,0,0.7)');
+  }
 
-  function renderChannelCanvas(imageData, w, h, wmm, hmm, channel, strength){
+  function channelContentCanvas(imageData, w, h, channel, strength){
     // channel: 'c' | 'm' | 'y'
     const c = document.createElement('canvas'); c.width=w; c.height=h;
     const ctx = c.getContext('2d');
@@ -1155,9 +1189,18 @@
       id.data[p*4]=r; id.data[p*4+1]=g; id.data[p*4+2]=b; id.data[p*4+3]=255;
     }
     ctx.putImageData(id,0,0);
-    const markColor = channel==='c' ? 'rgba(0,183,214,0.9)' : channel==='m' ? 'rgba(232,41,154,0.9)' : 'rgba(180,150,0,0.9)';
-    drawAlignmentMarks(ctx,w,h,wmm,hmm,markColor);
     return c;
+  }
+  function channelMarkColor(channel){
+    return channel==='c' ? 'rgba(0,183,214,0.9)' : channel==='m' ? 'rgba(232,41,154,0.9)' : 'rgba(180,150,0,0.9)';
+  }
+  function renderChannelCanvas(imageData, w, h, wmm, hmm, channel, strength){
+    const c = channelContentCanvas(imageData, w, h, channel, strength);
+    drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm,channelMarkColor(channel));
+    return c;
+  }
+  function renderChannelPrintCanvas(imageData, w, h, wmm, hmm, channel, strength){
+    return addPrintBleed(channelContentCanvas(imageData, w, h, channel, strength), wmm, hmm, channelMarkColor(channel));
   }
 
   // 原始種片：裁切構圖過後的原始彩色照片，作為額外輸出圖層（供對照排版/存檔使用），同樣加上對位記號
@@ -1167,6 +1210,11 @@
     ctx.putImageData(imageData,0,0);
     drawAlignmentMarks(ctx,w,h,wmm,hmm,'rgba(0,0,0,0.6)');
     return c;
+  }
+  function renderOriginalPrintCanvas(imageData, w, h, wmm, hmm){
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').putImageData(imageData,0,0);
+    return addPrintBleed(c, wmm, hmm, 'rgba(0,0,0,0.6)');
   }
 
   // ---------- AI 主體偵測（U^2-Netp，本機執行） ----------
@@ -1179,6 +1227,65 @@
     return segSession;
   }
 
+  // 去除顯著度遮罩中的小面積雜訊區塊（4連通floodfill找出各獨立區塊，面積低於總面積0.5%的整塊清為0），
+  // 避免背景中零星的小誤判區域殘留在最終遮罩裡
+  function removeMaskNoise(saliency, size){
+    const plane = size*size;
+    const bin = new Uint8Array(plane);
+    for(let i=0;i<plane;i++) bin[i] = saliency[i] > 0.5 ? 1 : 0;
+    const labels = new Int32Array(plane).fill(-1);
+    const areas = [];
+    const stack = new Int32Array(plane);
+    let nextLabel = 0;
+    for(let start=0; start<plane; start++){
+      if(bin[start]!==1 || labels[start]!==-1) continue;
+      let sp = 0;
+      stack[sp++] = start;
+      labels[start] = nextLabel;
+      let area = 0;
+      while(sp>0){
+        const idx = stack[--sp];
+        area++;
+        const x = idx % size, y = (idx/size)|0;
+        if(x>0 && bin[idx-1]===1 && labels[idx-1]===-1){ labels[idx-1]=nextLabel; stack[sp++]=idx-1; }
+        if(x<size-1 && bin[idx+1]===1 && labels[idx+1]===-1){ labels[idx+1]=nextLabel; stack[sp++]=idx+1; }
+        if(y>0 && bin[idx-size]===1 && labels[idx-size]===-1){ labels[idx-size]=nextLabel; stack[sp++]=idx-size; }
+        if(y<size-1 && bin[idx+size]===1 && labels[idx+size]===-1){ labels[idx+size]=nextLabel; stack[sp++]=idx+size; }
+      }
+      areas.push(area);
+      nextLabel++;
+    }
+    if(nextLabel === 0) return saliency; // 完全沒有偵測到主體，不處理，避免整張清空
+    const minArea = plane * 0.005;
+    const keep = areas.map(a => a >= minArea);
+    const cleaned = new Float32Array(plane);
+    for(let i=0;i<plane;i++){
+      const lbl = labels[i];
+      cleaned[i] = (lbl !== -1 && keep[lbl]) ? saliency[i] : 0;
+    }
+    return cleaned;
+  }
+
+  // 小範圍box blur，讓遮罩邊緣柔化過渡，避免放大到實際畫布尺寸時邊界顯得鋸齒/生硬
+  function featherMask(data, size, radius){
+    if(radius<=0) return data;
+    const out = new Float32Array(data.length);
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        let sum=0,count=0;
+        for(let dy=-radius;dy<=radius;dy++){
+          const yy=y+dy; if(yy<0||yy>=size) continue;
+          for(let dx=-radius;dx<=radius;dx++){
+            const xx=x+dx; if(xx<0||xx>=size) continue;
+            sum += data[yy*size+xx]; count++;
+          }
+        }
+        out[y*size+x] = sum/count;
+      }
+    }
+    return out;
+  }
+
   async function runAutoSegmentation(){
     const statusEl = document.getElementById('aiStatus');
     if(!img){ statusEl.textContent='請先上傳照片。'; return; }
@@ -1189,6 +1296,9 @@
       statusEl.textContent = '模型已就緒，正在分析主體輪廓…';
       await new Promise(r=>setTimeout(r,10));
 
+      // 注意：目前vendor的u2netp.onnx模型輸入尺寸是寫死的320x320（並非動態尺寸的全卷積網路），
+      // 實測直接改用512x512餵入會被onnxruntime拒絕（"Got invalid dimensions...Expected: 320"）。
+      // 若要真的提高輸入解析度，必須換一個支援更大/動態輸入尺寸的模型檔案（見README已知限制）。
       const SIZE = 320;
       const {wmm,hmm} = currentPhysicalSize();
       const {w:sw,h:sh} = fitSize(wmm,hmm,512);
@@ -1210,7 +1320,13 @@
       const tensor = new ort.Tensor('float32', chw, [1,3,SIZE,SIZE]);
       const feeds = {}; feeds[inputName] = tensor;
       const results = await session.run(feeds);
-      const outData = results[outputName].data; // [1,1,320,320]，0~1 顯著度
+      const rawSaliency = results[outputName].data; // [1,1,SIZE,SIZE]，0~1 顯著度
+
+      // 後處理：去除小面積雜訊區塊＋邊緣羽化，兩者皆為純運算，不需額外AI模型
+      statusEl.textContent = '正在細化遮罩邊緣…';
+      await new Promise(r=>setTimeout(r,0));
+      const cleaned = removeMaskNoise(rawSaliency, SIZE);
+      const outData = featherMask(cleaned, SIZE, 1);
 
       const maskTmp = document.createElement('canvas'); maskTmp.width=SIZE; maskTmp.height=SIZE;
       const mctx2 = maskTmp.getContext('2d');
@@ -1306,7 +1422,7 @@
   }
   document.getElementById('animeGenerateBtn').addEventListener('click', generateAnimePreviewNow);
 
-  // 風格強度／亮度／對比／飽和度只是輕量後製，滑桿拖曳時直接重新套用在已快取的AI原始結果上即時更新畫面，
+  // 似顏繪細緻度只是輕量後製，滑桿拖曳時直接重新套用在已快取的AI原始結果上即時更新畫面，
   // 不會重新觸發AI推論（AI推論只由「產生／更新預覽」按鈕或裁切/尺寸/畫風改變後再按一次觸發）
   function refreshAnimeAdjustmentsOnly(){
     if(!animeRawCache || lineArtMode !== 'anime' || !lastPreviewLayers) return;
@@ -1318,18 +1434,10 @@
     lastPreviewLayers.lineCanvas = lineCanvas;
     renderComposite();
   }
-  const animeAdjustBindings = [
-    ['animeIntensityRange','animeIntensityVal', v=>v+'%'],
-    ['animeBrightRange','animeBrightVal', v=>v],
-    ['animeContrastRange','animeContrastVal', v=>v],
-    ['animeSaturateRange','animeSaturateVal', v=>v],
-  ];
-  animeAdjustBindings.forEach(([rangeId,labelId,fmt])=>{
-    const r = document.getElementById(rangeId);
-    r.addEventListener('input', ()=>{
-      document.getElementById(labelId).textContent = fmt(r.value);
-      refreshAnimeAdjustmentsOnly();
-    });
+  const animeDetailRangeEl = document.getElementById('animeDetailRange');
+  animeDetailRangeEl.addEventListener('input', ()=>{
+    document.getElementById('animeDetailVal').textContent = animeDetailRangeEl.value;
+    refreshAnimeAdjustmentsOnly();
   });
 
   function runPreview(){
@@ -1541,7 +1649,9 @@
   // 並自動排版到儘量少的A4頁面；statusCb(msg) 可選，用於回報目前處理到哪個圖層
   async function generatePrintPages(includeOtherMode, statusCb){
     const {w,h,wmm,hmm} = fullPixelSize();
-    const grid = planA4Grid(wmm, hmm);
+    // 每張列印圖層實際佔用的物理尺寸＝步驟①輸出尺寸外擴出血邊（見PRINT_BLEED_MM），A4排版要用這個外擴後的尺寸計算
+    const printWmm = wmm + 2*PRINT_BLEED_MM, printHmm = hmm + 2*PRINT_BLEED_MM;
+    const grid = planA4Grid(printWmm, printHmm);
 
     const brightness = +document.getElementById('brightRange').value;
     const contrast = +document.getElementById('contrastRange').value;
@@ -1559,16 +1669,16 @@
     const otherMode = lineArtMode === 'sketch' ? 'anime' : 'sketch';
 
     const jobs = [
-      { label:'原始照片', make: () => renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm) },
-      { label:'灰階高度圖', make: () => renderGrayCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
+      { label:'原始照片', make: () => renderOriginalPrintCanvas(imageData, w, h, wmm, hmm) },
+      { label:'灰階高度圖', make: () => renderGrayPrintCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
       { label: modeLabel(lineArtMode), make: async () => { primary = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm); return primary.lineCanvas; } },
     ];
     if(includeOtherMode){
       jobs.push({ label: modeLabel(otherMode), make: async () => { secondary = await computeLineArtFull(otherMode, grayRaw, w, h, wmm, hmm); return secondary.lineCanvas; } });
     }
-    jobs.push({ label:'Cyan版', make: () => renderChannelCanvas(imageData, w, h, wmm, hmm, 'c', cS) });
-    jobs.push({ label:'Magenta版', make: () => renderChannelCanvas(imageData, w, h, wmm, hmm, 'm', mS) });
-    jobs.push({ label:'Yellow版', make: () => renderChannelCanvas(imageData, w, h, wmm, hmm, 'y', yS) });
+    jobs.push({ label:'Cyan版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'c', cS) });
+    jobs.push({ label:'Magenta版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'm', mS) });
+    jobs.push({ label:'Yellow版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'y', yS) });
 
     const pages = [];
     let curPage = null, idxOnPage = 0;
@@ -1590,18 +1700,14 @@
 
       if(idxOnPage >= grid.perPage){ pages.push(curPage); startNewPage(); }
       const col = idxOnPage % grid.cols, row = Math.floor(idxOnPage / grid.cols);
-      const xmm = grid.offXmm + col*wmm, ymm = grid.offYmm + row*hmm;
-      drawItemOntoPage(curPage, layerCanvas, wmm, hmm, xmm, ymm);
+      const xmm = grid.offXmm + col*printWmm, ymm = grid.offYmm + row*printHmm;
+      drawItemOntoPage(curPage, layerCanvas, printWmm, printHmm, xmm, ymm);
       idxOnPage++;
       layerCanvas.width = 0; layerCanvas.height = 0; // 盡快釋放來源圖層canvas佔用的記憶體
     }
     pages.push(curPage);
 
     return { pages, primary, secondary, w, h, wmm, hmm };
-  }
-
-  function canvasToPNGBlob(canvas){
-    return new Promise(resolve=> canvas.toBlob(b=>resolve(b), 'image/png'));
   }
 
   function downloadBlob(blob, filename){
@@ -1612,8 +1718,136 @@
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }
 
+  function strToBytes(str){ return new TextEncoder().encode(str); }
+  function concatBytes(arrays){
+    let total = 0;
+    for(const a of arrays) total += a.length;
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for(const a of arrays){ out.set(a, offset); offset += a.length; }
+    return out;
+  }
+
+  // ---------- 下載列印頁面：A4 PDF，圖片色彩空間為 DeviceCMYK（專業印刷色彩格式） ----------
+  // RGB → CMYK 數值轉換（標準公式：K=1-max(R,G,B)，其餘channel依K再正規化），逐像素轉換，
+  // 回傳與來源同寬高、每像素4 bytes（C,M,Y,K）的Uint8Array，可直接當PDF DeviceCMYK圖片原始樣本資料。
+  // 注意：這是純數值轉換，並未套用任何ICC色彩描述檔（色彩管理），所以呈現的CMYK數值是裝置獨立的
+  // 近似值，不是經過印刷廠特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準（如SWOP、Fogra、
+  // Japan Color）的ICC描述檔嵌入PDF的OutputIntent，需要額外提供該描述檔的.icc二進位檔案。
+  function rgbaToCmykBytes(imageData){
+    const {data, width, height} = imageData;
+    const out = new Uint8Array(width*height*4);
+    for(let i=0,p=0;i<data.length;i+=4,p+=4){
+      const r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255;
+      const k = 1 - Math.max(r,g,b);
+      let c=0, m=0, y=0;
+      if(k < 1){
+        const invK = 1/(1-k);
+        c = (1-r-k)*invK;
+        m = (1-g-k)*invK;
+        y = (1-b-k)*invK;
+      }
+      out[p]   = Math.round(Math.max(0,Math.min(1,c))*255);
+      out[p+1] = Math.round(Math.max(0,Math.min(1,m))*255);
+      out[p+2] = Math.round(Math.max(0,Math.min(1,y))*255);
+      out[p+3] = Math.round(Math.max(0,Math.min(1,k))*255);
+    }
+    return out;
+  }
+
+  // 手刻最簡PDF產生器：多頁，每頁嵌入一張DeviceCMYK點陣圖填滿整個頁面（用fflate的zlibSync
+  // 做FlateDecode壓縮，PDF規格要求的是標準zlib格式，需用zlibSync而非deflateSync）。
+  // pagesInfo: [{ widthPt, heightPt, widthPx, heightPx, cmykBytes }]
+  function buildPdfFromPages(pagesInfo){
+    const n = pagesInfo.length;
+    const catalogNum = 1, pagesNum = 2;
+    let nextNum = 3;
+    const pageNums = [], contentNums = [], imageNums = [];
+    for(let i=0;i<n;i++){
+      pageNums.push(nextNum++);
+      contentNums.push(nextNum++);
+      imageNums.push(nextNum++);
+    }
+    const totalObjs = nextNum - 1;
+    const objBytesList = new Array(totalObjs + 1); // 1-based索引，[0]不使用
+
+    const kidsRefs = pageNums.map(pn => `${pn} 0 R`).join(' ');
+    objBytesList[catalogNum] = strToBytes(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+    objBytesList[pagesNum] = strToBytes(`<< /Type /Pages /Kids [${kidsRefs}] /Count ${n} >>`);
+
+    for(let i=0;i<n;i++){
+      const {widthPt, heightPt, widthPx, heightPx, cmykBytes} = pagesInfo[i];
+      const pageNum = pageNums[i], contentNum = contentNums[i], imageNum = imageNums[i];
+      objBytesList[pageNum] = strToBytes(
+        `<< /Type /Page /Parent ${pagesNum} 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] `+
+        `/Resources << /XObject << /Im0 ${imageNum} 0 R >> >> /Contents ${contentNum} 0 R >>`
+      );
+
+      const contentStream = strToBytes(`q ${widthPt} 0 0 ${heightPt} 0 0 cm /Im0 Do Q`);
+      objBytesList[contentNum] = concatBytes([
+        strToBytes(`<< /Length ${contentStream.length} >>\nstream\n`),
+        contentStream,
+        strToBytes(`\nendstream`)
+      ]);
+
+      const compressed = fflate.zlibSync(cmykBytes, {level:6});
+      objBytesList[imageNum] = concatBytes([
+        strToBytes(
+          `<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} `+
+          `/ColorSpace /DeviceCMYK /BitsPerComponent 8 /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n`
+        ),
+        compressed,
+        strToBytes(`\nendstream`)
+      ]);
+    }
+
+    // 依序組裝檔案並記錄每個object的byte offset（xref table需要）
+    const chunks = [strToBytes('%PDF-1.4\n')];
+    let offset = chunks[0].length;
+    const offsets = new Array(totalObjs + 1).fill(0);
+    for(let num=1; num<=totalObjs; num++){
+      offsets[num] = offset;
+      const objChunk = concatBytes([strToBytes(`${num} 0 obj\n`), objBytesList[num], strToBytes(`\nendobj\n`)]);
+      chunks.push(objChunk);
+      offset += objChunk.length;
+    }
+    const xrefOffset = offset;
+
+    // xref table：每筆固定20 bytes（10位數offset + 空格 + 5位數generation + 空格 + n/f + \r\n）
+    const pad = (num, len) => String(num).padStart(len, '0');
+    let xrefStr = `xref\n0 ${totalObjs + 1}\n`;
+    xrefStr += `${pad(0,10)} 65535 f\r\n`;
+    for(let num=1; num<=totalObjs; num++){
+      xrefStr += `${pad(offsets[num],10)} 00000 n\r\n`;
+    }
+    chunks.push(strToBytes(xrefStr));
+
+    chunks.push(strToBytes(
+      `trailer\n<< /Size ${totalObjs + 1} /Root ${catalogNum} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+    ));
+
+    return concatBytes(chunks);
+  }
+
+  // 把 generatePrintPages() 產生的多張A4頁面canvas轉成CMYK PDF的Blob
+  function pagesToPdfBlob(pages){
+    const ptPerPx = 72 / DPI; // PDF頁面單位是point（1/72吋），畫布是600dpi像素，需換算
+    const pagesInfo = pages.map(pageCanvas => {
+      const w = pageCanvas.width, h = pageCanvas.height;
+      const imageData = pageCanvas.getContext('2d').getImageData(0,0,w,h);
+      return {
+        widthPt: w*ptPerPx, heightPt: h*ptPerPx,
+        widthPx: w, heightPx: h,
+        cmykBytes: rgbaToCmykBytes(imageData)
+      };
+    });
+    const pdfBytes = buildPdfFromPages(pagesInfo);
+    return new Blob([pdfBytes], {type:'application/pdf'});
+  }
+
   document.getElementById('dlPrintPages').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
+    if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js，PDF壓縮需要），請確認 assets 資料夾已一併部署。'); return; }
     // 開始耗時的排版工作前，先確認日式似顏繪風格快取存在且未過期：下載/匯出不會重新執行AI，
     // 沒有可用快取就直接提示使用者，而不是先跑完其他圖層才失敗
     const ready = animeCacheReadyFor(lineArtMode);
@@ -1622,41 +1856,17 @@
     await new Promise(r=>setTimeout(r,30));
     try{
       const { pages } = await generatePrintPages(false, setStatus);
-      for(let i=0;i<pages.length;i++){
-        setStatus(`正在輸出第 ${i+1}／${pages.length} 頁 PNG…`);
-        const blob = await canvasToPNGBlob(pages[i]);
-        downloadBlob(blob, pages.length>1 ? `print-page-${i+1}.png` : 'print-page.png');
-        pages[i].width = 0; pages[i].height = 0;
-      }
-      setStatus(`完成，已下載 ${pages.length} 張列印頁面（列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
+      setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
+      await new Promise(r=>setTimeout(r,0));
+      const pdfBlob = pagesToPdfBlob(pages);
+      for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
+      downloadBlob(pdfBlob, 'print-pages.pdf');
+      setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
     } catch(err){
       setStatus('產生列印頁面失敗：'+err.message);
       console.error(err);
     }
   });
-
-  document.getElementById('dlLineLaser').addEventListener('click', async ()=>{
-    if(!img){ setStatus('請先上傳照片。'); return; }
-    const ready = animeCacheReadyFor(lineArtMode);
-    if(!ready.ok){ setStatus(ready.reason); return; }
-    setStatus('處理中，請稍候…（使用已產生的圖層進行輸出，完整解析度運算需要一點時間）');
-    await new Promise(r=>setTimeout(r,30));
-    try{
-      const {w,h,wmm,hmm} = fullPixelSize();
-      const srcCanvas = getCroppedCanvas(w,h);
-      const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
-      const grayRaw = toGray(imageData);
-      const result = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm);
-      const fname = result.mode==='sketch' ? 'lineart-sketch-laser.png' : 'lineart-anime-laser.png';
-      downloadBlob(await canvasToPNGBlob(result.laserCanvas), fname);
-      setStatus('完成，檔案已下載。');
-    } catch(err){
-      setStatus('產生雷射雕刻檔案失敗：'+err.message);
-      console.error(err);
-    }
-  });
-
-  function strToBytes(str){ return new TextEncoder().encode(str); }
 
   // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
   async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
@@ -1677,15 +1887,13 @@
     try{
       const { pages, primary, secondary, wmm, hmm, w, h } = await generatePrintPages(includeOther, setStatus);
 
+      setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
+      await new Promise(r=>setTimeout(r,0));
+      const pdfBlob = pagesToPdfBlob(pages);
+      for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
+
       const files = {};
-      for(let i=0;i<pages.length;i++){
-        files[pages.length>1 ? `print-page-${i+1}.png` : 'print-page.png'] = await toU8(await canvasToPNGBlob(pages[i]));
-        pages[i].width = 0; pages[i].height = 0;
-      }
-      files[primary.mode==='sketch' ? 'lineart-sketch-laser.png' : 'lineart-anime-laser.png'] = await toU8(await canvasToPNGBlob(primary.laserCanvas));
-      if(secondary){
-        files[secondary.mode==='sketch' ? 'lineart-sketch-laser.png' : 'lineart-anime-laser.png'] = await toU8(await canvasToPNGBlob(secondary.laserCanvas));
-      }
+      files['print-pages.pdf'] = await toU8(pdfBlob);
 
       const modeNote = secondary
         ? `已同時包含「日式似顏繪風格」與「素描風」兩種外層裝飾層模式的檔案。`
@@ -1695,9 +1903,7 @@
 實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
 
 檔案：
-- print-page-N.png：已自動排版於A4紙（210×297mm，600dpi）的列印頁面，同一張A4紙會依實際輸出尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；圖面本身不含任何文字標籤，四角皆有「十字線＋打孔圓點」同心對位記號，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿虛線裁切即為實際輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。
-- lineart-anime-laser.png：日式似顏繪風格的雷射雕刻專用灰階點陣（亮度轉換，深色=雕更深，如與您軟體慣例相反請在下載前勾選反轉），維持原始輸出尺寸，不參與A4排版，供直接匯入雷射雕刻軟體使用。
-- lineart-sketch-laser.png：素描風的雷射雕刻專用灰階點陣，同上說明。
+- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在外擴後的邊界，換算下來恰好落在原始輸出尺寸邊界上；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿對位十字所在邊界裁切即為原始輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值是標準公式換算（非印刷廠ICC色彩描述檔校正過的顏色），適合家用/一般印刷；如需搭配特定印刷標準色域，請自行在印刷軟體/RIP端指定描述檔。
 
 ${modeNote}
 
@@ -1706,7 +1912,7 @@ ${modeNote}
 日式似顏繪風格所使用的CartoonGAN模型權重（宮崎駿吉卜力風/細田守風/今敏風/新海誠風）採MIT授權，向原作者 Yijun Li 等人致謝：https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch
 `;
       files['README.txt'] = strToBytes(readme);
-      const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PNG本身已壓縮過，圖層檔案不需再壓一次
+      const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PDF內圖片已用FlateDecode壓縮過，不需再壓一次
       const zipBlob = new Blob([zipped], {type:'application/zip'});
       downloadBlob(zipBlob, 'photo-lithobox-layers.zip');
       setStatus(`完成，ZIP 已下載，內含 ${Object.keys(files).length} 個檔案（含說明文件）。`);
@@ -1739,13 +1945,24 @@ ${modeNote}
     return {totalTri, bytes};
   }
 
+  // 底板邊框（含四角圓孔）的三角形數量：直接跑一次真正的產生邏輯到暫用陣列來計數，
+  // 確保估算跟實際輸出一致，不需要另外維護一份容易失準的估算公式
+  function estimateFrameTriCount(outerWmm, outerHmm){
+    const scratch = [];
+    collectFrameTriangles(scratch, outerWmm, outerHmm, STL_BLEED_MM, 1, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
+    return scratch.length/9;
+  }
+
   function updateSTLEstimate(){
     const meshLongEdge = +document.getElementById('meshRange').value;
     const {wmm,hmm} = currentPhysicalSize();
     const {w:gw,h:gh} = fitSize(wmm,hmm,meshLongEdge);
-    const {totalTri, bytes} = estimateSTL(Math.max(2,gw), Math.max(2,gh));
+    const {totalTri:heightmapTri} = estimateSTL(Math.max(2,gw), Math.max(2,gh));
+    const frameTri = estimateFrameTriCount(wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM);
+    const totalTri = heightmapTri + frameTri;
+    const bytes = 84 + totalTri*50;
     document.getElementById('meshEstimate').textContent =
-      `約 ${Math.max(2,gw)}×${Math.max(2,gh)} 網格、${totalTri.toLocaleString()} 個三角形，檔案約 ${(bytes/1024/1024).toFixed(1)} MB`;
+      `約 ${Math.max(2,gw)}×${Math.max(2,gh)} 浮雕網格＋外擴底板邊框（含四角對位孔），共約 ${Math.round(totalTri).toLocaleString()} 個三角形，檔案約 ${(bytes/1024/1024).toFixed(1)} MB`;
   }
   document.getElementById('meshRange').addEventListener('input', e=>{
     document.getElementById('meshVal').textContent = e.target.value;
@@ -1753,7 +1970,14 @@ ${modeNote}
   });
   updateSTLEstimate();
 
-  function buildHeightmapSTL(gridGray, gw, gh, physWmm, physHmm, baseT, reliefT, invert){
+  // 把單一三角形的9個座標值(ax,ay,az,bx,by,bz,cx,cy,cz)加進triangles陣列，序列化時再統一算法線
+  function pushTri(triangles, ax,ay,az,bx,by,bz,cx,cy,cz){
+    triangles.push(ax,ay,az,bx,by,bz,cx,cy,cz);
+  }
+
+  // 把heightmap浮雕實體的三角形加進共用的triangles陣列（可指定offsetXmm/offsetYmm，讓這個實體能內嵌在
+  // 更大的底板/邊框中央，而不是永遠從原點開始）
+  function collectHeightmapTriangles(triangles, gridGray, gw, gh, physWmm, physHmm, baseT, reliefT, invert, offsetXmm, offsetYmm){
     const stepX = physWmm/(gw-1);
     const stepY = physHmm/(gh-1);
     function hAt(x,y){
@@ -1761,18 +1985,131 @@ ${modeNote}
       if(invert) v = 1-v;
       return baseT + reliefT*(1-v); // 亮(v→1)较薄、暗(v→0)较厚；反轉時對調
     }
-    function px(x){ return x*stepX; }
-    function py(y){ return (gh-1-y)*stepY; }
+    function px(x){ return offsetXmm + x*stepX; }
+    function py(y){ return offsetYmm + (gh-1-y)*stepY; }
 
-    const {totalTri} = estimateSTL(gw,gh);
+    // 頂面（法線朝上）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        const z00=hAt(x,y), z10=hAt(x+1,y), z01=hAt(x,y+1), z11=hAt(x+1,y+1);
+        pushTri(triangles, x0,y0,z00, x1,y1,z11, x1,y0,z10);
+        pushTri(triangles, x0,y0,z00, x0,y1,z01, x1,y1,z11);
+      }
+    }
+    // 底面（z=0，法線朝下）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        pushTri(triangles, x0,y0,0, x1,y0,0, x1,y1,0);
+        pushTri(triangles, x0,y0,0, x1,y1,0, x0,y1,0);
+      }
+    }
+    // 側面：y=0（前緣，世界座標Y為最大值，外法線應朝+Y）與 y=gh-1（後緣，世界座標Y=0，外法線應朝-Y）
+    for(let x=0;x<gw-1;x++){
+      let x0=px(x), x1=px(x+1);
+      let yv=py(0), zt0=hAt(x,0), zt1=hAt(x+1,0);
+      pushTri(triangles, x0,yv,0, x0,yv,zt0, x1,yv,zt1);
+      pushTri(triangles, x0,yv,0, x1,yv,zt1, x1,yv,0);
+      yv=py(gh-1); zt0=hAt(x,gh-1); zt1=hAt(x+1,gh-1);
+      pushTri(triangles, x0,yv,0, x1,yv,zt1, x0,yv,zt0);
+      pushTri(triangles, x0,yv,0, x1,yv,0, x1,yv,zt1);
+    }
+    // 側面：x=0（左緣）與 x=gw-1（右緣）
+    for(let y=0;y<gh-1;y++){
+      let y0=py(y), y1=py(y+1);
+      let xv=px(0), zt0=hAt(0,y), zt1=hAt(0,y+1);
+      pushTri(triangles, xv,y0,0, xv,y1,zt1, xv,y0,zt0);
+      pushTri(triangles, xv,y0,0, xv,y1,0, xv,y1,zt1);
+      xv=px(gw-1); zt0=hAt(gw-1,y); zt1=hAt(gw-1,y+1);
+      pushTri(triangles, xv,y0,0, xv,y0,zt0, xv,y1,zt1);
+      pushTri(triangles, xv,y0,0, xv,y1,zt1, xv,y1,0);
+    }
+  }
+
+  // 把一個「平面矩形板，可能含一個圓孔」的三角形（頂面+底面+側壁+孔內壁）加進triangles陣列。
+  // 沒有hole參數時當簡單長方體處理；有的話用細格點陣近似圓孔（cellSize決定精細度，越小圓孔越平滑，
+  // 三角形數量也越多），格點中心落在圓孔半徑內的視為「鏤空」不生成頂/底面，並在鏤空邊界補上孔內壁。
+  function collectFlatPatchTriangles(triangles, x0,y0,x1,y1,z0,z1,hole,cellSize){
+    if(x1<=x0 || y1<=y0) return;
+    if(!hole){
+      pushTri(triangles, x0,y0,z1, x1,y0,z1, x1,y1,z1); pushTri(triangles, x0,y0,z1, x1,y1,z1, x0,y1,z1); // top
+      pushTri(triangles, x0,y0,z0, x1,y1,z0, x1,y0,z0); pushTri(triangles, x0,y0,z0, x0,y1,z0, x1,y1,z0); // bottom
+      pushTri(triangles, x0,y0,z0, x1,y0,z0, x1,y0,z1); pushTri(triangles, x0,y0,z0, x1,y0,z1, x0,y0,z1); // y=y0 wall
+      pushTri(triangles, x0,y1,z0, x1,y1,z1, x1,y1,z0); pushTri(triangles, x0,y1,z0, x0,y1,z1, x1,y1,z1); // y=y1 wall
+      pushTri(triangles, x0,y0,z0, x0,y1,z1, x0,y1,z0); pushTri(triangles, x0,y0,z0, x0,y0,z1, x0,y1,z1); // x=x0 wall
+      pushTri(triangles, x1,y0,z0, x1,y1,z0, x1,y1,z1); pushTri(triangles, x1,y0,z0, x1,y1,z1, x1,y0,z1); // x=x1 wall
+      return;
+    }
+    const {cx, cy, r} = hole;
+    const nx = Math.max(1, Math.round((x1-x0)/cellSize));
+    const ny = Math.max(1, Math.round((y1-y0)/cellSize));
+    const dx = (x1-x0)/nx, dy = (y1-y0)/ny;
+    const filled = new Uint8Array(nx*ny); // 1=實心（有頂/底面），0=落在圓孔內（鏤空）
+    for(let iy=0; iy<ny; iy++){
+      for(let ix=0; ix<nx; ix++){
+        const ccx = x0+(ix+0.5)*dx, ccy = y0+(iy+0.5)*dy;
+        const ddx = ccx-cx, ddy = ccy-cy;
+        filled[iy*nx+ix] = (ddx*ddx+ddy*ddy) < r*r ? 0 : 1;
+      }
+    }
+    for(let iy=0; iy<ny; iy++){
+      for(let ix=0; ix<nx; ix++){
+        if(!filled[iy*nx+ix]) continue;
+        const gx0=x0+ix*dx, gx1=x0+(ix+1)*dx, gy0=y0+iy*dy, gy1=y0+(iy+1)*dy;
+        pushTri(triangles, gx0,gy0,z1, gx1,gy0,z1, gx1,gy1,z1); pushTri(triangles, gx0,gy0,z1, gx1,gy1,z1, gx0,gy1,z1); // top
+        pushTri(triangles, gx0,gy0,z0, gx1,gy1,z0, gx1,gy0,z0); pushTri(triangles, gx0,gy0,z0, gx0,gy1,z0, gx1,gy1,z0); // bottom
+        // 跟外部（圓孔內部或patch本身邊界）相鄰的格邊才需要補側壁，避免內部相鄰的實心格之間產生多餘牆面
+        const leftFilled  = ix>0    ? filled[iy*nx+ix-1] : 0;
+        const rightFilled = ix<nx-1 ? filled[iy*nx+ix+1] : 0;
+        const downFilled  = iy>0    ? filled[(iy-1)*nx+ix] : 0;
+        const upFilled     = iy<ny-1 ? filled[(iy+1)*nx+ix] : 0;
+        if(!leftFilled){  pushTri(triangles, gx0,gy0,z0, gx0,gy1,z1, gx0,gy1,z0); pushTri(triangles, gx0,gy0,z0, gx0,gy0,z1, gx0,gy1,z1); }
+        if(!rightFilled){ pushTri(triangles, gx1,gy0,z0, gx1,gy1,z0, gx1,gy1,z1); pushTri(triangles, gx1,gy0,z0, gx1,gy1,z1, gx1,gy0,z1); }
+        if(!downFilled){  pushTri(triangles, gx0,gy0,z0, gx1,gy0,z0, gx1,gy0,z1); pushTri(triangles, gx0,gy0,z0, gx1,gy0,z1, gx0,gy0,z1); }
+        if(!upFilled){    pushTri(triangles, gx0,gy1,z0, gx1,gy1,z1, gx1,gy1,z0); pushTri(triangles, gx0,gy1,z0, gx0,gy1,z1, gx1,gy1,z1); }
+      }
+    }
+  }
+
+  // 外擴底板的邊框：outerWmm x outerHmm 的板子，中央挖空一塊 photoWmm x photoHmm（給heightmap浮雕實體
+  // 對齊嵌入），四角在距離outerWmm/outerHmm邊界STL_HOLE_INSET_MM處各開一個直徑STL_HOLE_DIAMETER_MM的圓孔。
+  // 拆成8塊互不重疊、密合拼接的簡單形狀分開生成（4個角落方塊各含1個圓孔、上下各1個中段矩形、左右各1個
+  // 中段矩形），避免處理「矩形挖1個大洞+4個小洞」這種複雜多孔多邊形三角化。
+  function collectFrameTriangles(triangles, outerWmm, outerHmm, bleedMm, baseT, holeInsetMm, holeDiameterMm, cellSize){
+    const holeR = holeDiameterMm/2;
+    const b = bleedMm;
+    const corners = [
+      {x0:0, y0:0, cx:holeInsetMm, cy:holeInsetMm},
+      {x0:outerWmm-b, y0:0, cx:outerWmm-holeInsetMm, cy:holeInsetMm},
+      {x0:0, y0:outerHmm-b, cx:holeInsetMm, cy:outerHmm-holeInsetMm},
+      {x0:outerWmm-b, y0:outerHmm-b, cx:outerWmm-holeInsetMm, cy:outerHmm-holeInsetMm},
+    ];
+    for(const c of corners){
+      collectFlatPatchTriangles(triangles, c.x0, c.y0, c.x0+b, c.y0+b, 0, baseT, {cx:c.cx, cy:c.cy, r:holeR}, cellSize);
+    }
+    // 上／下中段（不含四角，四角已經處理過）
+    collectFlatPatchTriangles(triangles, b, 0, outerWmm-b, b, 0, baseT, null, cellSize);
+    collectFlatPatchTriangles(triangles, b, outerHmm-b, outerWmm-b, outerHmm, 0, baseT, null, cellSize);
+    // 左／右中段（介於上下段之間，同樣不含四角）
+    collectFlatPatchTriangles(triangles, 0, b, b, outerHmm-b, 0, baseT, null, cellSize);
+    collectFlatPatchTriangles(triangles, outerWmm-b, b, outerWmm, outerHmm-b, 0, baseT, null, cellSize);
+  }
+
+  // 把收集好的三角形陣列（每9個數字一組）序列化為二進位STL Blob
+  function serializeSTL(triangles){
+    const totalTri = triangles.length/9;
     const buf = new ArrayBuffer(84 + totalTri*50);
     const view = new DataView(buf);
     const header = 'STL from photo-to-cmyk-lithobox heightmap relief';
     for(let i=0;i<Math.min(80,header.length);i++) view.setUint8(i, header.charCodeAt(i));
     view.setUint32(80, totalTri, true);
     let off = 84;
-
-    function writeTri(ax,ay,az,bx,by,bz,cx,cy,cz){
+    for(let t=0; t<totalTri; t++){
+      const p = t*9;
+      const ax=triangles[p],ay=triangles[p+1],az=triangles[p+2];
+      const bx=triangles[p+3],by=triangles[p+4],bz=triangles[p+5];
+      const cx=triangles[p+6],cy=triangles[p+7],cz=triangles[p+8];
       const ux=bx-ax, uy=by-ay, uz=bz-az;
       const vx=cx-ax, vy=cy-ay, vz=cz-az;
       let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
@@ -1792,45 +2129,6 @@ ${modeNote}
       view.setFloat32(off,cz,true); off+=4;
       view.setUint16(off,0,true); off+=2;
     }
-
-    // 頂面（法線朝上）
-    for(let y=0;y<gh-1;y++){
-      for(let x=0;x<gw-1;x++){
-        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
-        const z00=hAt(x,y), z10=hAt(x+1,y), z01=hAt(x,y+1), z11=hAt(x+1,y+1);
-        writeTri(x0,y0,z00, x1,y1,z11, x1,y0,z10);
-        writeTri(x0,y0,z00, x0,y1,z01, x1,y1,z11);
-      }
-    }
-    // 底面（z=0，法線朝下）
-    for(let y=0;y<gh-1;y++){
-      for(let x=0;x<gw-1;x++){
-        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
-        writeTri(x0,y0,0, x1,y0,0, x1,y1,0);
-        writeTri(x0,y0,0, x1,y1,0, x0,y1,0);
-      }
-    }
-    // 側面：y=0（前緣，世界座標Y為最大值，外法線應朝+Y）與 y=gh-1（後緣，世界座標Y=0，外法線應朝-Y）
-    for(let x=0;x<gw-1;x++){
-      let x0=px(x), x1=px(x+1);
-      let yv=py(0), zt0=hAt(x,0), zt1=hAt(x+1,0);
-      writeTri(x0,yv,0, x0,yv,zt0, x1,yv,zt1);
-      writeTri(x0,yv,0, x1,yv,zt1, x1,yv,0);
-      yv=py(gh-1); zt0=hAt(x,gh-1); zt1=hAt(x+1,gh-1);
-      writeTri(x0,yv,0, x1,yv,zt1, x0,yv,zt0);
-      writeTri(x0,yv,0, x1,yv,0, x1,yv,zt1);
-    }
-    // 側面：x=0（左緣）與 x=gw-1（右緣）
-    for(let y=0;y<gh-1;y++){
-      let y0=py(y), y1=py(y+1);
-      let xv=px(0), zt0=hAt(0,y), zt1=hAt(0,y+1);
-      writeTri(xv,y0,0, xv,y1,zt1, xv,y0,zt0);
-      writeTri(xv,y0,0, xv,y1,0, xv,y1,zt1);
-      xv=px(gw-1); zt0=hAt(gw-1,y); zt1=hAt(gw-1,y+1);
-      writeTri(xv,y0,0, xv,y0,zt0, xv,y1,zt1);
-      writeTri(xv,y0,0, xv,y1,zt1, xv,y1,0);
-    }
-
     return new Blob([buf], {type:'model/stl'});
   }
 
@@ -1854,9 +2152,16 @@ ${modeNote}
       const reliefT = Math.max(0.1, +document.getElementById('reliefThicknessInput').value || 2.0);
 
       const {data:gridGray, gw, gh} = downsampleGray(gray, w, h, meshLongEdge);
-      const blob = buildHeightmapSTL(gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert);
+
+      // 浮雕實體（置中內嵌在外擴底板邊框中央，偏移STL_BLEED_MM）＋外擴底板邊框（含四角對位孔）
+      // 各自都是獨立、密合拼接的watertight實體，一起輸出到同一個STL檔——多個緊貼/重疊的實體
+      // 放進同一個STL檔是常見且安全的做法，slicer會自動視為一個連通的可列印體積。
+      const triangles = [];
+      collectHeightmapTriangles(triangles, gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert, STL_BLEED_MM, STL_BLEED_MM);
+      collectFrameTriangles(triangles, wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM, STL_BLEED_MM, baseT, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
+      const blob = serializeSTL(triangles);
       downloadBlob(blob, 'relief-model.stl');
-      statusEl.textContent = `完成，STL已下載（${gw}×${gh} 網格，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
+      statusEl.textContent = `完成，STL已下載（${gw}×${gh} 浮雕網格，底板外擴${STL_BLEED_MM}mm並於四角開直徑${STL_HOLE_DIAMETER_MM}mm對位孔，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
     } catch(err){
       statusEl.textContent = '產生STL失敗：'+err.message;
       console.error(err);
