@@ -328,6 +328,15 @@
   // 換算下來十字記號恰好會落在原始wmm×hmm邊界上（外擴距離與inset距離相同）。只影響下載/匯出，不影響畫面即時預覽。
   const PRINT_BLEED_MM = 5;
   const HOLE_DIAMETER_MM = 3; // 對位打孔圓點的固定實際直徑（不隨解析度變化，僅換算px）
+  // 3D列印STL底板：比照列印圖層的出血邊精神，底板也在步驟①輸出尺寸外緣外擴STL_BLEED_MM，
+  // 四角開直徑STL_HOLE_DIAMETER_MM的圓孔，供組裝時穿螺絲/銷釘對齊各圖層。
+  // STL_HOLE_INSET_MM刻意選在出血邊寬度的中點（而非跟紙本對位記號一樣直接等於STL_BLEED_MM），
+  // 確保整個圓孔（半徑=直徑/2）完全落在平坦的出血邊內、不會跟中央浮雕實體的邊界重疊，
+  // 這樣才能形成真正貫穿底板的乾淨孔洞（若嚴格對齊到浮雕邊界，孔洞會有一半落在浮雕實體上，無法乾淨穿孔）。
+  const STL_BLEED_MM = 5;
+  const STL_HOLE_DIAMETER_MM = 3;
+  const STL_HOLE_INSET_MM = STL_BLEED_MM / 2;
+  const STL_HOLE_CELL_SIZE_MM = 0.15; // 圓孔用細格點陣近似的格子邊長，越小圓孔越平滑但三角形數量越多
   const PREVIEW_MAX = 480;     // 即時預覽/裁切用的工作解析度上限
   const A4_PORTRAIT_WMM = 210, A4_PORTRAIT_HMM = 297; // A4紙直向尺寸
   const A4_MARGIN_MM = 5; // A4紙下載列印圖層預留的列印邊界
@@ -1936,13 +1945,24 @@ ${modeNote}
     return {totalTri, bytes};
   }
 
+  // 底板邊框（含四角圓孔）的三角形數量：直接跑一次真正的產生邏輯到暫用陣列來計數，
+  // 確保估算跟實際輸出一致，不需要另外維護一份容易失準的估算公式
+  function estimateFrameTriCount(outerWmm, outerHmm){
+    const scratch = [];
+    collectFrameTriangles(scratch, outerWmm, outerHmm, STL_BLEED_MM, 1, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
+    return scratch.length/9;
+  }
+
   function updateSTLEstimate(){
     const meshLongEdge = +document.getElementById('meshRange').value;
     const {wmm,hmm} = currentPhysicalSize();
     const {w:gw,h:gh} = fitSize(wmm,hmm,meshLongEdge);
-    const {totalTri, bytes} = estimateSTL(Math.max(2,gw), Math.max(2,gh));
+    const {totalTri:heightmapTri} = estimateSTL(Math.max(2,gw), Math.max(2,gh));
+    const frameTri = estimateFrameTriCount(wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM);
+    const totalTri = heightmapTri + frameTri;
+    const bytes = 84 + totalTri*50;
     document.getElementById('meshEstimate').textContent =
-      `約 ${Math.max(2,gw)}×${Math.max(2,gh)} 網格、${totalTri.toLocaleString()} 個三角形，檔案約 ${(bytes/1024/1024).toFixed(1)} MB`;
+      `約 ${Math.max(2,gw)}×${Math.max(2,gh)} 浮雕網格＋外擴底板邊框（含四角對位孔），共約 ${Math.round(totalTri).toLocaleString()} 個三角形，檔案約 ${(bytes/1024/1024).toFixed(1)} MB`;
   }
   document.getElementById('meshRange').addEventListener('input', e=>{
     document.getElementById('meshVal').textContent = e.target.value;
@@ -1950,7 +1970,14 @@ ${modeNote}
   });
   updateSTLEstimate();
 
-  function buildHeightmapSTL(gridGray, gw, gh, physWmm, physHmm, baseT, reliefT, invert){
+  // 把單一三角形的9個座標值(ax,ay,az,bx,by,bz,cx,cy,cz)加進triangles陣列，序列化時再統一算法線
+  function pushTri(triangles, ax,ay,az,bx,by,bz,cx,cy,cz){
+    triangles.push(ax,ay,az,bx,by,bz,cx,cy,cz);
+  }
+
+  // 把heightmap浮雕實體的三角形加進共用的triangles陣列（可指定offsetXmm/offsetYmm，讓這個實體能內嵌在
+  // 更大的底板/邊框中央，而不是永遠從原點開始）
+  function collectHeightmapTriangles(triangles, gridGray, gw, gh, physWmm, physHmm, baseT, reliefT, invert, offsetXmm, offsetYmm){
     const stepX = physWmm/(gw-1);
     const stepY = physHmm/(gh-1);
     function hAt(x,y){
@@ -1958,18 +1985,131 @@ ${modeNote}
       if(invert) v = 1-v;
       return baseT + reliefT*(1-v); // 亮(v→1)较薄、暗(v→0)较厚；反轉時對調
     }
-    function px(x){ return x*stepX; }
-    function py(y){ return (gh-1-y)*stepY; }
+    function px(x){ return offsetXmm + x*stepX; }
+    function py(y){ return offsetYmm + (gh-1-y)*stepY; }
 
-    const {totalTri} = estimateSTL(gw,gh);
+    // 頂面（法線朝上）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        const z00=hAt(x,y), z10=hAt(x+1,y), z01=hAt(x,y+1), z11=hAt(x+1,y+1);
+        pushTri(triangles, x0,y0,z00, x1,y1,z11, x1,y0,z10);
+        pushTri(triangles, x0,y0,z00, x0,y1,z01, x1,y1,z11);
+      }
+    }
+    // 底面（z=0，法線朝下）
+    for(let y=0;y<gh-1;y++){
+      for(let x=0;x<gw-1;x++){
+        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
+        pushTri(triangles, x0,y0,0, x1,y0,0, x1,y1,0);
+        pushTri(triangles, x0,y0,0, x1,y1,0, x0,y1,0);
+      }
+    }
+    // 側面：y=0（前緣，世界座標Y為最大值，外法線應朝+Y）與 y=gh-1（後緣，世界座標Y=0，外法線應朝-Y）
+    for(let x=0;x<gw-1;x++){
+      let x0=px(x), x1=px(x+1);
+      let yv=py(0), zt0=hAt(x,0), zt1=hAt(x+1,0);
+      pushTri(triangles, x0,yv,0, x0,yv,zt0, x1,yv,zt1);
+      pushTri(triangles, x0,yv,0, x1,yv,zt1, x1,yv,0);
+      yv=py(gh-1); zt0=hAt(x,gh-1); zt1=hAt(x+1,gh-1);
+      pushTri(triangles, x0,yv,0, x1,yv,zt1, x0,yv,zt0);
+      pushTri(triangles, x0,yv,0, x1,yv,0, x1,yv,zt1);
+    }
+    // 側面：x=0（左緣）與 x=gw-1（右緣）
+    for(let y=0;y<gh-1;y++){
+      let y0=py(y), y1=py(y+1);
+      let xv=px(0), zt0=hAt(0,y), zt1=hAt(0,y+1);
+      pushTri(triangles, xv,y0,0, xv,y1,zt1, xv,y0,zt0);
+      pushTri(triangles, xv,y0,0, xv,y1,0, xv,y1,zt1);
+      xv=px(gw-1); zt0=hAt(gw-1,y); zt1=hAt(gw-1,y+1);
+      pushTri(triangles, xv,y0,0, xv,y0,zt0, xv,y1,zt1);
+      pushTri(triangles, xv,y0,0, xv,y1,zt1, xv,y1,0);
+    }
+  }
+
+  // 把一個「平面矩形板，可能含一個圓孔」的三角形（頂面+底面+側壁+孔內壁）加進triangles陣列。
+  // 沒有hole參數時當簡單長方體處理；有的話用細格點陣近似圓孔（cellSize決定精細度，越小圓孔越平滑，
+  // 三角形數量也越多），格點中心落在圓孔半徑內的視為「鏤空」不生成頂/底面，並在鏤空邊界補上孔內壁。
+  function collectFlatPatchTriangles(triangles, x0,y0,x1,y1,z0,z1,hole,cellSize){
+    if(x1<=x0 || y1<=y0) return;
+    if(!hole){
+      pushTri(triangles, x0,y0,z1, x1,y0,z1, x1,y1,z1); pushTri(triangles, x0,y0,z1, x1,y1,z1, x0,y1,z1); // top
+      pushTri(triangles, x0,y0,z0, x1,y1,z0, x1,y0,z0); pushTri(triangles, x0,y0,z0, x0,y1,z0, x1,y1,z0); // bottom
+      pushTri(triangles, x0,y0,z0, x1,y0,z0, x1,y0,z1); pushTri(triangles, x0,y0,z0, x1,y0,z1, x0,y0,z1); // y=y0 wall
+      pushTri(triangles, x0,y1,z0, x1,y1,z1, x1,y1,z0); pushTri(triangles, x0,y1,z0, x0,y1,z1, x1,y1,z1); // y=y1 wall
+      pushTri(triangles, x0,y0,z0, x0,y1,z1, x0,y1,z0); pushTri(triangles, x0,y0,z0, x0,y0,z1, x0,y1,z1); // x=x0 wall
+      pushTri(triangles, x1,y0,z0, x1,y1,z0, x1,y1,z1); pushTri(triangles, x1,y0,z0, x1,y1,z1, x1,y0,z1); // x=x1 wall
+      return;
+    }
+    const {cx, cy, r} = hole;
+    const nx = Math.max(1, Math.round((x1-x0)/cellSize));
+    const ny = Math.max(1, Math.round((y1-y0)/cellSize));
+    const dx = (x1-x0)/nx, dy = (y1-y0)/ny;
+    const filled = new Uint8Array(nx*ny); // 1=實心（有頂/底面），0=落在圓孔內（鏤空）
+    for(let iy=0; iy<ny; iy++){
+      for(let ix=0; ix<nx; ix++){
+        const ccx = x0+(ix+0.5)*dx, ccy = y0+(iy+0.5)*dy;
+        const ddx = ccx-cx, ddy = ccy-cy;
+        filled[iy*nx+ix] = (ddx*ddx+ddy*ddy) < r*r ? 0 : 1;
+      }
+    }
+    for(let iy=0; iy<ny; iy++){
+      for(let ix=0; ix<nx; ix++){
+        if(!filled[iy*nx+ix]) continue;
+        const gx0=x0+ix*dx, gx1=x0+(ix+1)*dx, gy0=y0+iy*dy, gy1=y0+(iy+1)*dy;
+        pushTri(triangles, gx0,gy0,z1, gx1,gy0,z1, gx1,gy1,z1); pushTri(triangles, gx0,gy0,z1, gx1,gy1,z1, gx0,gy1,z1); // top
+        pushTri(triangles, gx0,gy0,z0, gx1,gy1,z0, gx1,gy0,z0); pushTri(triangles, gx0,gy0,z0, gx0,gy1,z0, gx1,gy1,z0); // bottom
+        // 跟外部（圓孔內部或patch本身邊界）相鄰的格邊才需要補側壁，避免內部相鄰的實心格之間產生多餘牆面
+        const leftFilled  = ix>0    ? filled[iy*nx+ix-1] : 0;
+        const rightFilled = ix<nx-1 ? filled[iy*nx+ix+1] : 0;
+        const downFilled  = iy>0    ? filled[(iy-1)*nx+ix] : 0;
+        const upFilled     = iy<ny-1 ? filled[(iy+1)*nx+ix] : 0;
+        if(!leftFilled){  pushTri(triangles, gx0,gy0,z0, gx0,gy1,z1, gx0,gy1,z0); pushTri(triangles, gx0,gy0,z0, gx0,gy0,z1, gx0,gy1,z1); }
+        if(!rightFilled){ pushTri(triangles, gx1,gy0,z0, gx1,gy1,z0, gx1,gy1,z1); pushTri(triangles, gx1,gy0,z0, gx1,gy1,z1, gx1,gy0,z1); }
+        if(!downFilled){  pushTri(triangles, gx0,gy0,z0, gx1,gy0,z0, gx1,gy0,z1); pushTri(triangles, gx0,gy0,z0, gx1,gy0,z1, gx0,gy0,z1); }
+        if(!upFilled){    pushTri(triangles, gx0,gy1,z0, gx1,gy1,z1, gx1,gy1,z0); pushTri(triangles, gx0,gy1,z0, gx0,gy1,z1, gx1,gy1,z1); }
+      }
+    }
+  }
+
+  // 外擴底板的邊框：outerWmm x outerHmm 的板子，中央挖空一塊 photoWmm x photoHmm（給heightmap浮雕實體
+  // 對齊嵌入），四角在距離outerWmm/outerHmm邊界STL_HOLE_INSET_MM處各開一個直徑STL_HOLE_DIAMETER_MM的圓孔。
+  // 拆成8塊互不重疊、密合拼接的簡單形狀分開生成（4個角落方塊各含1個圓孔、上下各1個中段矩形、左右各1個
+  // 中段矩形），避免處理「矩形挖1個大洞+4個小洞」這種複雜多孔多邊形三角化。
+  function collectFrameTriangles(triangles, outerWmm, outerHmm, bleedMm, baseT, holeInsetMm, holeDiameterMm, cellSize){
+    const holeR = holeDiameterMm/2;
+    const b = bleedMm;
+    const corners = [
+      {x0:0, y0:0, cx:holeInsetMm, cy:holeInsetMm},
+      {x0:outerWmm-b, y0:0, cx:outerWmm-holeInsetMm, cy:holeInsetMm},
+      {x0:0, y0:outerHmm-b, cx:holeInsetMm, cy:outerHmm-holeInsetMm},
+      {x0:outerWmm-b, y0:outerHmm-b, cx:outerWmm-holeInsetMm, cy:outerHmm-holeInsetMm},
+    ];
+    for(const c of corners){
+      collectFlatPatchTriangles(triangles, c.x0, c.y0, c.x0+b, c.y0+b, 0, baseT, {cx:c.cx, cy:c.cy, r:holeR}, cellSize);
+    }
+    // 上／下中段（不含四角，四角已經處理過）
+    collectFlatPatchTriangles(triangles, b, 0, outerWmm-b, b, 0, baseT, null, cellSize);
+    collectFlatPatchTriangles(triangles, b, outerHmm-b, outerWmm-b, outerHmm, 0, baseT, null, cellSize);
+    // 左／右中段（介於上下段之間，同樣不含四角）
+    collectFlatPatchTriangles(triangles, 0, b, b, outerHmm-b, 0, baseT, null, cellSize);
+    collectFlatPatchTriangles(triangles, outerWmm-b, b, outerWmm, outerHmm-b, 0, baseT, null, cellSize);
+  }
+
+  // 把收集好的三角形陣列（每9個數字一組）序列化為二進位STL Blob
+  function serializeSTL(triangles){
+    const totalTri = triangles.length/9;
     const buf = new ArrayBuffer(84 + totalTri*50);
     const view = new DataView(buf);
     const header = 'STL from photo-to-cmyk-lithobox heightmap relief';
     for(let i=0;i<Math.min(80,header.length);i++) view.setUint8(i, header.charCodeAt(i));
     view.setUint32(80, totalTri, true);
     let off = 84;
-
-    function writeTri(ax,ay,az,bx,by,bz,cx,cy,cz){
+    for(let t=0; t<totalTri; t++){
+      const p = t*9;
+      const ax=triangles[p],ay=triangles[p+1],az=triangles[p+2];
+      const bx=triangles[p+3],by=triangles[p+4],bz=triangles[p+5];
+      const cx=triangles[p+6],cy=triangles[p+7],cz=triangles[p+8];
       const ux=bx-ax, uy=by-ay, uz=bz-az;
       const vx=cx-ax, vy=cy-ay, vz=cz-az;
       let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
@@ -1989,45 +2129,6 @@ ${modeNote}
       view.setFloat32(off,cz,true); off+=4;
       view.setUint16(off,0,true); off+=2;
     }
-
-    // 頂面（法線朝上）
-    for(let y=0;y<gh-1;y++){
-      for(let x=0;x<gw-1;x++){
-        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
-        const z00=hAt(x,y), z10=hAt(x+1,y), z01=hAt(x,y+1), z11=hAt(x+1,y+1);
-        writeTri(x0,y0,z00, x1,y1,z11, x1,y0,z10);
-        writeTri(x0,y0,z00, x0,y1,z01, x1,y1,z11);
-      }
-    }
-    // 底面（z=0，法線朝下）
-    for(let y=0;y<gh-1;y++){
-      for(let x=0;x<gw-1;x++){
-        const x0=px(x), x1=px(x+1), y0=py(y), y1=py(y+1);
-        writeTri(x0,y0,0, x1,y0,0, x1,y1,0);
-        writeTri(x0,y0,0, x1,y1,0, x0,y1,0);
-      }
-    }
-    // 側面：y=0（前緣，世界座標Y為最大值，外法線應朝+Y）與 y=gh-1（後緣，世界座標Y=0，外法線應朝-Y）
-    for(let x=0;x<gw-1;x++){
-      let x0=px(x), x1=px(x+1);
-      let yv=py(0), zt0=hAt(x,0), zt1=hAt(x+1,0);
-      writeTri(x0,yv,0, x0,yv,zt0, x1,yv,zt1);
-      writeTri(x0,yv,0, x1,yv,zt1, x1,yv,0);
-      yv=py(gh-1); zt0=hAt(x,gh-1); zt1=hAt(x+1,gh-1);
-      writeTri(x0,yv,0, x1,yv,zt1, x0,yv,zt0);
-      writeTri(x0,yv,0, x1,yv,0, x1,yv,zt1);
-    }
-    // 側面：x=0（左緣）與 x=gw-1（右緣）
-    for(let y=0;y<gh-1;y++){
-      let y0=py(y), y1=py(y+1);
-      let xv=px(0), zt0=hAt(0,y), zt1=hAt(0,y+1);
-      writeTri(xv,y0,0, xv,y1,zt1, xv,y0,zt0);
-      writeTri(xv,y0,0, xv,y1,0, xv,y1,zt1);
-      xv=px(gw-1); zt0=hAt(gw-1,y); zt1=hAt(gw-1,y+1);
-      writeTri(xv,y0,0, xv,y0,zt0, xv,y1,zt1);
-      writeTri(xv,y0,0, xv,y1,zt1, xv,y1,0);
-    }
-
     return new Blob([buf], {type:'model/stl'});
   }
 
@@ -2051,9 +2152,16 @@ ${modeNote}
       const reliefT = Math.max(0.1, +document.getElementById('reliefThicknessInput').value || 2.0);
 
       const {data:gridGray, gw, gh} = downsampleGray(gray, w, h, meshLongEdge);
-      const blob = buildHeightmapSTL(gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert);
+
+      // 浮雕實體（置中內嵌在外擴底板邊框中央，偏移STL_BLEED_MM）＋外擴底板邊框（含四角對位孔）
+      // 各自都是獨立、密合拼接的watertight實體，一起輸出到同一個STL檔——多個緊貼/重疊的實體
+      // 放進同一個STL檔是常見且安全的做法，slicer會自動視為一個連通的可列印體積。
+      const triangles = [];
+      collectHeightmapTriangles(triangles, gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert, STL_BLEED_MM, STL_BLEED_MM);
+      collectFrameTriangles(triangles, wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM, STL_BLEED_MM, baseT, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
+      const blob = serializeSTL(triangles);
       downloadBlob(blob, 'relief-model.stl');
-      statusEl.textContent = `完成，STL已下載（${gw}×${gh} 網格，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
+      statusEl.textContent = `完成，STL已下載（${gw}×${gh} 浮雕網格，底板外擴${STL_BLEED_MM}mm並於四角開直徑${STL_HOLE_DIAMETER_MM}mm對位孔，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
     } catch(err){
       statusEl.textContent = '產生STL失敗：'+err.message;
       console.error(err);
