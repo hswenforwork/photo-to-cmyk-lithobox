@@ -273,7 +273,7 @@
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）改畫在這個外擴後的新邊界，換算下來恰好落在原始輸出尺寸的邊界上；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿對位十字所在的原始尺寸邊界裁切即為步驟①設定的實際輸出尺寸。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：目前是標準數值換算（K=1-max(R,G,B)等公式），並未嵌入印刷廠專用的ICC色彩描述檔（如SWOP、Fogra、Japan Color等），所以是裝置獨立的近似CMYK值，不是經過特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準，請自行在印刷軟體/RIP端指定描述檔。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：目前是標準數值換算（K=1-max(R,G,B)等公式），並未嵌入印刷廠專用的ICC色彩描述檔（如SWOP、Fogra、Japan Color等），所以是裝置獨立的近似CMYK值，不是經過特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準，請自行在印刷軟體/RIP端指定描述檔。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -322,17 +322,22 @@
     "7x5": { wmm: 7*25.4, hmm: 5*25.4 },
     "5x3.5": { wmm: 5*25.4, hmm: 3.5*25.4 }
   };
-  const MARK_INSET_MM = 5; // 對位十字＋打孔記號距離頁面邊界的固定距離（mm）
-  // 下載/匯出的列印圖層會在步驟①輸出尺寸（wmm×hmm）外緣再外擴這個距離作為出血邊，
-  // 內容仍是原始wmm×hmm、置中；對位十字＋打孔記號改成距離這個外擴後的新邊界inset(=MARK_INSET_MM)，
-  // 換算下來十字記號恰好會落在原始wmm×hmm邊界上（外擴距離與inset距離相同）。只影響下載/匯出，不影響畫面即時預覽。
+  const MARK_INSET_MM = 5; // 即時預覽（無出血邊）用的對位十字＋打孔記號距離畫面邊界的固定距離（mm）
+  // 下載/匯出的列印圖層會在步驟①輸出尺寸（wmm×hmm）外緣再外擴這個距離作為出血邊，內容仍是原始
+  // wmm×hmm、置中；對位十字＋打孔記號改用PRINT_MARK_INSET_MM（見下方）距離這個外擴後的新邊界。
+  // 只影響下載/匯出，不影響畫面即時預覽。
   const PRINT_BLEED_MM = 5;
+  // 下載/匯出的對位十字＋打孔記號中心，距離出血邊外緣的距離：刻意選在出血邊寬度的中點（而非
+  // 直接等於PRINT_BLEED_MM），比照3D列印底板STL_HOLE_INSET_MM同樣的「出血邊中點」邏輯，
+  // 讓紙本圖層的記號位置跟3D列印底板的對位孔位置完全對齊，方便組裝時用同一組螺絲/銷釘對位。
+  const PRINT_MARK_INSET_MM = PRINT_BLEED_MM / 2;
   const HOLE_DIAMETER_MM = 3; // 對位打孔圓點的固定實際直徑（不隨解析度變化，僅換算px）
   // 3D列印STL底板：比照列印圖層的出血邊精神，底板也在步驟①輸出尺寸外緣外擴STL_BLEED_MM，
   // 四角開直徑STL_HOLE_DIAMETER_MM的圓孔，供組裝時穿螺絲/銷釘對齊各圖層。
-  // STL_HOLE_INSET_MM刻意選在出血邊寬度的中點（而非跟紙本對位記號一樣直接等於STL_BLEED_MM），
-  // 確保整個圓孔（半徑=直徑/2）完全落在平坦的出血邊內、不會跟中央浮雕實體的邊界重疊，
-  // 這樣才能形成真正貫穿底板的乾淨孔洞（若嚴格對齊到浮雕邊界，孔洞會有一半落在浮雕實體上，無法乾淨穿孔）。
+  // STL_HOLE_INSET_MM選在出血邊寬度的中點，跟紙本圖層的PRINT_MARK_INSET_MM用同一套「出血邊中點」
+  // 邏輯、數值也相同，讓3D底板的對位孔跟紙本圖層的對位記號完全對齊；同時確保整個圓孔（半徑=直徑/2）
+  // 完全落在平坦的出血邊內、不會跟中央浮雕實體的邊界重疊，這樣才能形成真正貫穿底板的乾淨孔洞
+  // （若對齊到浮雕邊界，孔洞會有一半落在浮雕實體上，無法乾淨穿孔）。
   const STL_BLEED_MM = 5;
   const STL_HOLE_DIAMETER_MM = 3;
   const STL_HOLE_INSET_MM = STL_BLEED_MM / 2;
@@ -1108,12 +1113,14 @@
     }
   }
 
-  // 對位十字線 + 打孔圓點記號，固定畫在四個角落，且距離頁面邊界固定為 MARK_INSET_MM（mm），
+  // 對位十字線 + 打孔圓點記號，固定畫在四個角落，且距離頁面邊界固定為 insetMm（預設MARK_INSET_MM，
+  // 供即時預覽使用；下載/匯出時addPrintBleed()會改傳PRINT_MARK_INSET_MM），
   // 以 wmm/hmm（實際物理尺寸）換算px/mm比例，確保不同解析度（預覽/完整輸出）下位置與尺寸一致
-  function drawAlignmentMarks(ctx, w, h, wmm, hmm, color){
+  function drawAlignmentMarks(ctx, w, h, wmm, hmm, color, insetMm){
     color = color || 'rgba(0,0,0,0.85)';
+    if(insetMm === undefined) insetMm = MARK_INSET_MM;
     const pxPerMm = w / wmm;
-    const inset = MARK_INSET_MM * pxPerMm;
+    const inset = insetMm * pxPerMm;
     const crossLen = 3 * pxPerMm;
     const dotR = (HOLE_DIAMETER_MM/2) * pxPerMm; // 固定實際直徑3mm的打孔圓點，不隨畫面解析度縮放比例改變
     const corners = [ [inset,inset], [w-inset,inset], [inset,h-inset], [w-inset,h-inset] ];
@@ -1134,8 +1141,8 @@
   }
 
   // 下載/匯出專用：把已經畫好的內容canvas（尺寸=wmm×hmm）放進一張外擴PRINT_BLEED_MM的新畫布正中央
-  // （四周留白），並在新畫布的外緣重新畫上對位十字＋打孔記號——換算後這些記號會恰好落在原始wmm×hmm
-  // 內容的邊界上，外擴的部分純粹是列印/裁切用的出血邊。只用於下載/匯出，不影響畫面即時預覽。
+  // （四周留白），並在新畫布的外緣重新畫上對位十字＋打孔記號，中心距離外擴後邊界PRINT_MARK_INSET_MM
+  // （出血邊中點，跟3D列印底板的對位孔位置對齊）。只用於下載/匯出，不影響畫面即時預覽。
   function addPrintBleed(contentCanvas, wmm, hmm, markColor){
     const outWmm = wmm + 2*PRINT_BLEED_MM, outHmm = hmm + 2*PRINT_BLEED_MM;
     const outW = mmToPx(outWmm, DPI), outH = mmToPx(outHmm, DPI);
@@ -1145,7 +1152,7 @@
     ctx.fillRect(0,0,outW,outH);
     const offX = mmToPx(PRINT_BLEED_MM, DPI), offY = mmToPx(PRINT_BLEED_MM, DPI);
     ctx.drawImage(contentCanvas, offX, offY, mmToPx(wmm,DPI), mmToPx(hmm,DPI));
-    drawAlignmentMarks(ctx, outW, outH, outWmm, outHmm, markColor);
+    drawAlignmentMarks(ctx, outW, outH, outWmm, outHmm, markColor, PRINT_MARK_INSET_MM);
     return c;
   }
 
@@ -1903,7 +1910,7 @@
 實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
 
 檔案：
-- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在外擴後的邊界，換算下來恰好落在原始輸出尺寸邊界上；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿對位十字所在邊界裁切即為原始輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值是標準公式換算（非印刷廠ICC色彩描述檔校正過的顏色），適合家用/一般印刷；如需搭配特定印刷標準色域，請自行在印刷軟體/RIP端指定描述檔。
+- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在出血邊正中央（距離外擴後邊界${PRINT_MARK_INSET_MM}mm處），跟3D列印底板的四角對位孔位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿步驟①設定的原始輸出尺寸邊界（對位十字內側${PRINT_MARK_INSET_MM}mm處）裁切即可，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值是標準公式換算（非印刷廠ICC色彩描述檔校正過的顏色），適合家用/一般印刷；如需搭配特定印刷標準色域，請自行在印刷軟體/RIP端指定描述檔。
 
 ${modeNote}
 
