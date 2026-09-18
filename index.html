@@ -273,7 +273,7 @@
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：目前是標準數值換算（K=1-max(R,G,B)等公式），並未嵌入印刷廠專用的ICC色彩描述檔（如SWOP、Fogra、Japan Color等），所以是裝置獨立的近似CMYK值，不是經過特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準，請自行在印刷軟體/RIP端指定描述檔。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：RGB→CMYK採標準數值公式換算（K=1-max(R,G,B)等），本身不是經過ICC色彩管理的轉換；但PDF會內嵌「Japan Color 2011 Coated」印刷色域描述檔作為OutputIntent（首次下載時瀏覽器會另外下載約1.9MB的描述檔案，僅需一次），讓支援的印刷軟體/RIP知道這份CMYK數值對應的印刷條件依據，是業界常見的「印刷就緒PDF」宣告方式；描述檔下載失敗時仍會正常產生PDF，只是不含這項宣告。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -1735,12 +1735,36 @@
     return out;
   }
 
+  // ---------- PDF的CMYK印刷色域描述檔（ICC OutputIntent）：Japan Color 2011 Coated ----------
+  // 官方ICC描述檔（取自ICC色彩描述檔登錄資料庫 https://registry.color.org/profile-registry/JapanColor2011Coated ，
+  // 授權允許使用、嵌入PDF、交換、分享，未修改檔案內容），約1.9MB，首次下載後瀏覽器會快取。
+  // 嵌入PDF的OutputIntent只是「宣告」CMYK數值的印刷條件依據，不影響前面rgbaToCmykBytes()的數值換算
+  // 本身（仍是裝置獨立的公式換算，未做真正的ICC色彩管理轉換），但能讓支援PDF/X OutputIntent的印刷
+  // 軟體/RIP知道這份CMYK數值是依循哪個印刷標準產生，是業界慣用的「印刷就緒PDF」作法。
+  let iccProfilePromise = null;
+  function ensureIccProfile(statusCb){
+    if(iccProfilePromise) return iccProfilePromise;
+    if(statusCb) statusCb('首次使用，正在下載CMYK印刷色域描述檔（約1.9MB，僅需一次，之後瀏覽器會快取）…');
+    iccProfilePromise = withTimeout(
+      fetch('./assets/JapanColor2011Coated.icc').then(r=>{
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.arrayBuffer();
+      }).then(buf => new Uint8Array(buf)),
+      SCRIPT_LOAD_TIMEOUT_MS,
+      'CMYK印刷色域描述檔下載逾時'
+    ).catch(err=>{
+      iccProfilePromise = null; // 允許之後重試，而不是永久卡在失敗的promise
+      throw err;
+    });
+    return iccProfilePromise;
+  }
+
   // ---------- 下載列印頁面：A4 PDF，圖片色彩空間為 DeviceCMYK（專業印刷色彩格式） ----------
   // RGB → CMYK 數值轉換（標準公式：K=1-max(R,G,B)，其餘channel依K再正規化），逐像素轉換，
   // 回傳與來源同寬高、每像素4 bytes（C,M,Y,K）的Uint8Array，可直接當PDF DeviceCMYK圖片原始樣本資料。
-  // 注意：這是純數值轉換，並未套用任何ICC色彩描述檔（色彩管理），所以呈現的CMYK數值是裝置獨立的
-  // 近似值，不是經過印刷廠特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準（如SWOP、Fogra、
-  // Japan Color）的ICC描述檔嵌入PDF的OutputIntent，需要額外提供該描述檔的.icc二進位檔案。
+  // 注意：這是純數值轉換本身不是ICC色彩管理轉換，所以呈現的CMYK數值是裝置獨立的近似值，不是
+  // 經過印刷廠特定油墨/紙張特性校正過的顏色；PDF另外會內嵌Japan Color 2011 Coated描述檔作為
+  // OutputIntent（見下方ensureIccProfile/buildPdfFromPages），宣告這份CMYK數值的印刷條件依據。
   function rgbaToCmykBytes(imageData){
     const {data, width, height} = imageData;
     const out = new Uint8Array(width*height*4);
@@ -1765,10 +1789,18 @@
   // 手刻最簡PDF產生器：多頁，每頁嵌入一張DeviceCMYK點陣圖填滿整個頁面（用fflate的zlibSync
   // 做FlateDecode壓縮，PDF規格要求的是標準zlib格式，需用zlibSync而非deflateSync）。
   // pagesInfo: [{ widthPt, heightPt, widthPx, heightPx, cmykBytes }]
-  function buildPdfFromPages(pagesInfo){
+  // iccProfileBytes：可選，提供時會把這份ICC描述檔以PDF的OutputIntent（業界慣用的「印刷就緒PDF」
+  // 宣告方式）嵌入檔案，讓支援的印刷軟體/RIP知道CMYK數值的印刷條件依據；不提供則只輸出純DeviceCMYK
+  // 數值（不含色彩描述檔宣告），PDF仍然有效可用。
+  function buildPdfFromPages(pagesInfo, iccProfileBytes){
     const n = pagesInfo.length;
     const catalogNum = 1, pagesNum = 2;
     let nextNum = 3;
+    let outputIntentNum = null, iccStreamNum = null;
+    if(iccProfileBytes){
+      outputIntentNum = nextNum++;
+      iccStreamNum = nextNum++;
+    }
     const pageNums = [], contentNums = [], imageNums = [];
     for(let i=0;i<n;i++){
       pageNums.push(nextNum++);
@@ -1779,8 +1811,22 @@
     const objBytesList = new Array(totalObjs + 1); // 1-based索引，[0]不使用
 
     const kidsRefs = pageNums.map(pn => `${pn} 0 R`).join(' ');
-    objBytesList[catalogNum] = strToBytes(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+    const outputIntentsEntry = outputIntentNum ? ` /OutputIntents [${outputIntentNum} 0 R]` : '';
+    objBytesList[catalogNum] = strToBytes(`<< /Type /Catalog /Pages ${pagesNum} 0 R${outputIntentsEntry} >>`);
     objBytesList[pagesNum] = strToBytes(`<< /Type /Pages /Kids [${kidsRefs}] /Count ${n} >>`);
+
+    if(iccProfileBytes){
+      const label = 'Japan Color 2011 Coated';
+      objBytesList[outputIntentNum] = strToBytes(
+        `<< /Type /OutputIntent /S /GTS_PDFX /OutputConditionIdentifier (${label}) /Info (${label}) /DestOutputProfile ${iccStreamNum} 0 R >>`
+      );
+      const iccCompressed = fflate.zlibSync(iccProfileBytes, {level:6});
+      objBytesList[iccStreamNum] = concatBytes([
+        strToBytes(`<< /N 4 /Alternate /DeviceCMYK /Length ${iccCompressed.length} /Filter /FlateDecode >>\nstream\n`),
+        iccCompressed,
+        strToBytes(`\nendstream`)
+      ]);
+    }
 
     for(let i=0;i<n;i++){
       const {widthPt, heightPt, widthPx, heightPx, cmykBytes} = pagesInfo[i];
@@ -1837,7 +1883,7 @@
   }
 
   // 把 generatePrintPages() 產生的多張A4頁面canvas轉成CMYK PDF的Blob
-  function pagesToPdfBlob(pages){
+  function pagesToPdfBlob(pages, iccProfileBytes){
     const ptPerPx = 72 / DPI; // PDF頁面單位是point（1/72吋），畫布是600dpi像素，需換算
     const pagesInfo = pages.map(pageCanvas => {
       const w = pageCanvas.width, h = pageCanvas.height;
@@ -1848,7 +1894,7 @@
         cmykBytes: rgbaToCmykBytes(imageData)
       };
     });
-    const pdfBytes = buildPdfFromPages(pagesInfo);
+    const pdfBytes = buildPdfFromPages(pagesInfo, iccProfileBytes);
     return new Blob([pdfBytes], {type:'application/pdf'});
   }
 
@@ -1862,13 +1908,20 @@
     setStatus('處理中，請稍候…（使用已產生的圖層進行排版／輸出，完整解析度運算需要一點時間）');
     await new Promise(r=>setTimeout(r,30));
     try{
+      // 跟排版工作平行下載CMYK印刷色域描述檔，避免序列等待拖慢整體時間；描述檔下載失敗不會擋下
+      // 整個PDF產生流程，只是輸出的PDF不含OutputIntent（仍是完全有效的CMYK PDF）
+      const iccPromise = ensureIccProfile(setStatus).catch(err=>{
+        console.warn('CMYK印刷色域描述檔載入失敗，PDF將不包含OutputIntent（不影響其餘功能）', err);
+        return null;
+      });
       const { pages } = await generatePrintPages(false, setStatus);
+      const iccProfileBytes = await iccPromise;
       setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
       await new Promise(r=>setTimeout(r,0));
-      const pdfBlob = pagesToPdfBlob(pages);
+      const pdfBlob = pagesToPdfBlob(pages, iccProfileBytes);
       for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
       downloadBlob(pdfBlob, 'print-pages.pdf');
-      setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
+      setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩${iccProfileBytes ? '，已嵌入Japan Color 2011 Coated色域描述檔' : ''}，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
     } catch(err){
       setStatus('產生列印頁面失敗：'+err.message);
       console.error(err);
@@ -1892,11 +1945,18 @@
     setStatus('處理中，正在產生全部圖層與打包 ZIP，請稍候…（使用已產生的圖層進行排版／輸出／打包）');
     await new Promise(r=>setTimeout(r,30));
     try{
+      // 跟排版工作平行下載CMYK印刷色域描述檔，避免序列等待拖慢整體時間；描述檔下載失敗不會擋下
+      // 整個PDF產生流程，只是輸出的PDF不含OutputIntent（仍是完全有效的CMYK PDF）
+      const iccPromise = ensureIccProfile(setStatus).catch(err=>{
+        console.warn('CMYK印刷色域描述檔載入失敗，PDF將不包含OutputIntent（不影響其餘功能）', err);
+        return null;
+      });
       const { pages, primary, secondary, wmm, hmm, w, h } = await generatePrintPages(includeOther, setStatus);
+      const iccProfileBytes = await iccPromise;
 
       setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
       await new Promise(r=>setTimeout(r,0));
-      const pdfBlob = pagesToPdfBlob(pages);
+      const pdfBlob = pagesToPdfBlob(pages, iccProfileBytes);
       for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
 
       const files = {};
@@ -1910,7 +1970,7 @@
 實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
 
 檔案：
-- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在出血邊正中央（距離外擴後邊界${PRINT_MARK_INSET_MM}mm處），跟3D列印底板的四角對位孔位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿步驟①設定的原始輸出尺寸邊界（對位十字內側${PRINT_MARK_INSET_MM}mm處）裁切即可，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值是標準公式換算（非印刷廠ICC色彩描述檔校正過的顏色），適合家用/一般印刷；如需搭配特定印刷標準色域，請自行在印刷軟體/RIP端指定描述檔。
+- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在出血邊正中央（距離外擴後邊界${PRINT_MARK_INSET_MM}mm處），跟3D列印底板的四角對位孔位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿步驟①設定的原始輸出尺寸邊界（對位十字內側${PRINT_MARK_INSET_MM}mm處）裁切即可，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值本身是標準公式換算，並內嵌「Japan Color 2011 Coated」印刷色域描述檔作為PDF的OutputIntent（取自ICC色彩描述檔登錄資料庫 https://registry.color.org/profile-registry/JapanColor2011Coated ，授權允許使用/嵌入PDF/交換/分享），讓支援的印刷軟體/RIP知道CMYK數值的印刷條件依據。
 
 ${modeNote}
 
