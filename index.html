@@ -268,12 +268,12 @@
     <section class="panel">
       <h2>⑤ 下載列印圖層</h2>
       <div class="btn-row">
-        <button class="btn primary" id="dlPrintPages">下載列印頁面 PNG（自動排版於A4）</button>
+        <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
       <label style="margin-top:8px;"><input type="checkbox" id="zipIncludeBoth" style="width:auto; display:inline-block; margin-right:6px;">打包下載時，同時包含另一種外層裝飾層模式的檔案</label>
       <button class="btn primary" id="dlZip" disabled>產生並打包下載全部檔案（ZIP）</button>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）改畫在這個外擴後的新邊界，換算下來恰好落在原始輸出尺寸的邊界上；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿對位十字所在的原始尺寸邊界裁切即為步驟①設定的實際輸出尺寸。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）改畫在這個外擴後的新邊界，換算下來恰好落在原始輸出尺寸的邊界上；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿對位十字所在的原始尺寸邊界裁切即為步驟①設定的實際輸出尺寸。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：目前是標準數值換算（K=1-max(R,G,B)等公式），並未嵌入印刷廠專用的ICC色彩描述檔（如SWOP、Fogra、Japan Color等），所以是裝置獨立的近似CMYK值，不是經過特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準，請自行在印刷軟體/RIP端指定描述檔。若外層裝飾層使用日式似顏繪風格，下載/打包一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
     </section>
 
     <section class="panel">
@@ -1701,10 +1701,6 @@
     return { pages, primary, secondary, w, h, wmm, hmm };
   }
 
-  function canvasToPNGBlob(canvas){
-    return new Promise(resolve=> canvas.toBlob(b=>resolve(b), 'image/png'));
-  }
-
   function downloadBlob(blob, filename){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1713,8 +1709,136 @@
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }
 
+  function strToBytes(str){ return new TextEncoder().encode(str); }
+  function concatBytes(arrays){
+    let total = 0;
+    for(const a of arrays) total += a.length;
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for(const a of arrays){ out.set(a, offset); offset += a.length; }
+    return out;
+  }
+
+  // ---------- 下載列印頁面：A4 PDF，圖片色彩空間為 DeviceCMYK（專業印刷色彩格式） ----------
+  // RGB → CMYK 數值轉換（標準公式：K=1-max(R,G,B)，其餘channel依K再正規化），逐像素轉換，
+  // 回傳與來源同寬高、每像素4 bytes（C,M,Y,K）的Uint8Array，可直接當PDF DeviceCMYK圖片原始樣本資料。
+  // 注意：這是純數值轉換，並未套用任何ICC色彩描述檔（色彩管理），所以呈現的CMYK數值是裝置獨立的
+  // 近似值，不是經過印刷廠特定油墨/紙張特性校正過的顏色；如需搭配特定印刷標準（如SWOP、Fogra、
+  // Japan Color）的ICC描述檔嵌入PDF的OutputIntent，需要額外提供該描述檔的.icc二進位檔案。
+  function rgbaToCmykBytes(imageData){
+    const {data, width, height} = imageData;
+    const out = new Uint8Array(width*height*4);
+    for(let i=0,p=0;i<data.length;i+=4,p+=4){
+      const r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255;
+      const k = 1 - Math.max(r,g,b);
+      let c=0, m=0, y=0;
+      if(k < 1){
+        const invK = 1/(1-k);
+        c = (1-r-k)*invK;
+        m = (1-g-k)*invK;
+        y = (1-b-k)*invK;
+      }
+      out[p]   = Math.round(Math.max(0,Math.min(1,c))*255);
+      out[p+1] = Math.round(Math.max(0,Math.min(1,m))*255);
+      out[p+2] = Math.round(Math.max(0,Math.min(1,y))*255);
+      out[p+3] = Math.round(Math.max(0,Math.min(1,k))*255);
+    }
+    return out;
+  }
+
+  // 手刻最簡PDF產生器：多頁，每頁嵌入一張DeviceCMYK點陣圖填滿整個頁面（用fflate的zlibSync
+  // 做FlateDecode壓縮，PDF規格要求的是標準zlib格式，需用zlibSync而非deflateSync）。
+  // pagesInfo: [{ widthPt, heightPt, widthPx, heightPx, cmykBytes }]
+  function buildPdfFromPages(pagesInfo){
+    const n = pagesInfo.length;
+    const catalogNum = 1, pagesNum = 2;
+    let nextNum = 3;
+    const pageNums = [], contentNums = [], imageNums = [];
+    for(let i=0;i<n;i++){
+      pageNums.push(nextNum++);
+      contentNums.push(nextNum++);
+      imageNums.push(nextNum++);
+    }
+    const totalObjs = nextNum - 1;
+    const objBytesList = new Array(totalObjs + 1); // 1-based索引，[0]不使用
+
+    const kidsRefs = pageNums.map(pn => `${pn} 0 R`).join(' ');
+    objBytesList[catalogNum] = strToBytes(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+    objBytesList[pagesNum] = strToBytes(`<< /Type /Pages /Kids [${kidsRefs}] /Count ${n} >>`);
+
+    for(let i=0;i<n;i++){
+      const {widthPt, heightPt, widthPx, heightPx, cmykBytes} = pagesInfo[i];
+      const pageNum = pageNums[i], contentNum = contentNums[i], imageNum = imageNums[i];
+      objBytesList[pageNum] = strToBytes(
+        `<< /Type /Page /Parent ${pagesNum} 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] `+
+        `/Resources << /XObject << /Im0 ${imageNum} 0 R >> >> /Contents ${contentNum} 0 R >>`
+      );
+
+      const contentStream = strToBytes(`q ${widthPt} 0 0 ${heightPt} 0 0 cm /Im0 Do Q`);
+      objBytesList[contentNum] = concatBytes([
+        strToBytes(`<< /Length ${contentStream.length} >>\nstream\n`),
+        contentStream,
+        strToBytes(`\nendstream`)
+      ]);
+
+      const compressed = fflate.zlibSync(cmykBytes, {level:6});
+      objBytesList[imageNum] = concatBytes([
+        strToBytes(
+          `<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} `+
+          `/ColorSpace /DeviceCMYK /BitsPerComponent 8 /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n`
+        ),
+        compressed,
+        strToBytes(`\nendstream`)
+      ]);
+    }
+
+    // 依序組裝檔案並記錄每個object的byte offset（xref table需要）
+    const chunks = [strToBytes('%PDF-1.4\n')];
+    let offset = chunks[0].length;
+    const offsets = new Array(totalObjs + 1).fill(0);
+    for(let num=1; num<=totalObjs; num++){
+      offsets[num] = offset;
+      const objChunk = concatBytes([strToBytes(`${num} 0 obj\n`), objBytesList[num], strToBytes(`\nendobj\n`)]);
+      chunks.push(objChunk);
+      offset += objChunk.length;
+    }
+    const xrefOffset = offset;
+
+    // xref table：每筆固定20 bytes（10位數offset + 空格 + 5位數generation + 空格 + n/f + \r\n）
+    const pad = (num, len) => String(num).padStart(len, '0');
+    let xrefStr = `xref\n0 ${totalObjs + 1}\n`;
+    xrefStr += `${pad(0,10)} 65535 f\r\n`;
+    for(let num=1; num<=totalObjs; num++){
+      xrefStr += `${pad(offsets[num],10)} 00000 n\r\n`;
+    }
+    chunks.push(strToBytes(xrefStr));
+
+    chunks.push(strToBytes(
+      `trailer\n<< /Size ${totalObjs + 1} /Root ${catalogNum} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+    ));
+
+    return concatBytes(chunks);
+  }
+
+  // 把 generatePrintPages() 產生的多張A4頁面canvas轉成CMYK PDF的Blob
+  function pagesToPdfBlob(pages){
+    const ptPerPx = 72 / DPI; // PDF頁面單位是point（1/72吋），畫布是600dpi像素，需換算
+    const pagesInfo = pages.map(pageCanvas => {
+      const w = pageCanvas.width, h = pageCanvas.height;
+      const imageData = pageCanvas.getContext('2d').getImageData(0,0,w,h);
+      return {
+        widthPt: w*ptPerPx, heightPt: h*ptPerPx,
+        widthPx: w, heightPx: h,
+        cmykBytes: rgbaToCmykBytes(imageData)
+      };
+    });
+    const pdfBytes = buildPdfFromPages(pagesInfo);
+    return new Blob([pdfBytes], {type:'application/pdf'});
+  }
+
   document.getElementById('dlPrintPages').addEventListener('click', async ()=>{
     if(!img){ setStatus('請先上傳照片。'); return; }
+    if(typeof fflate === 'undefined'){ setStatus('找不到 fflate 函式庫（assets/fflate.umd.js，PDF壓縮需要），請確認 assets 資料夾已一併部署。'); return; }
     // 開始耗時的排版工作前，先確認日式似顏繪風格快取存在且未過期：下載/匯出不會重新執行AI，
     // 沒有可用快取就直接提示使用者，而不是先跑完其他圖層才失敗
     const ready = animeCacheReadyFor(lineArtMode);
@@ -1723,20 +1847,17 @@
     await new Promise(r=>setTimeout(r,30));
     try{
       const { pages } = await generatePrintPages(false, setStatus);
-      for(let i=0;i<pages.length;i++){
-        setStatus(`正在輸出第 ${i+1}／${pages.length} 頁 PNG…`);
-        const blob = await canvasToPNGBlob(pages[i]);
-        downloadBlob(blob, pages.length>1 ? `print-page-${i+1}.png` : 'print-page.png');
-        pages[i].width = 0; pages[i].height = 0;
-      }
-      setStatus(`完成，已下載 ${pages.length} 張列印頁面（列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
+      setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
+      await new Promise(r=>setTimeout(r,0));
+      const pdfBlob = pagesToPdfBlob(pages);
+      for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
+      downloadBlob(pdfBlob, 'print-pages.pdf');
+      setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
     } catch(err){
       setStatus('產生列印頁面失敗：'+err.message);
       console.error(err);
     }
   });
-
-  function strToBytes(str){ return new TextEncoder().encode(str); }
 
   // ---------- ZIP 打包：改用經過大量實際部署驗證的 fflate 函式庫（取代先前手刻版本，修正相容性問題） ----------
   async function toU8(blob){ return new Uint8Array(await blob.arrayBuffer()); }
@@ -1757,11 +1878,13 @@
     try{
       const { pages, primary, secondary, wmm, hmm, w, h } = await generatePrintPages(includeOther, setStatus);
 
+      setStatus(`正在轉換為CMYK並產生PDF（共${pages.length}頁）…`);
+      await new Promise(r=>setTimeout(r,0));
+      const pdfBlob = pagesToPdfBlob(pages);
+      for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
+
       const files = {};
-      for(let i=0;i<pages.length;i++){
-        files[pages.length>1 ? `print-page-${i+1}.png` : 'print-page.png'] = await toU8(await canvasToPNGBlob(pages[i]));
-        pages[i].width = 0; pages[i].height = 0;
-      }
+      files['print-pages.pdf'] = await toU8(pdfBlob);
 
       const modeNote = secondary
         ? `已同時包含「日式似顏繪風格」與「素描風」兩種外層裝飾層模式的檔案。`
@@ -1771,7 +1894,7 @@
 實際輸出尺寸：${wmm} x ${hmm} mm（600 DPI，${w} x ${h} px）
 
 檔案：
-- print-page-N.png：已自動排版於A4紙（210×297mm，600dpi）的列印頁面，同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在外擴後的邊界，換算下來恰好落在原始輸出尺寸邊界上；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿對位十字所在邊界裁切即為原始輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。
+- print-pages.pdf：已自動排版於A4紙（210×297mm，600dpi）的列印頁面PDF（每頁一張圖片，色彩空間為DeviceCMYK），同一張A4紙會依每張圖層外擴出血邊後的實際尺寸儘量塞入多張圖層（原始照片、灰階高度圖、外層裝飾層、Cyan/Magenta/Yellow版），塞不下的圖層會依序排到下一頁；每張圖層都在原始輸出尺寸外緣再外擴${PRINT_BLEED_MM}mm留白，四角「十字線＋打孔圓點」（固定直徑${HOLE_DIAMETER_MM}mm）同心對位記號畫在外擴後的邊界，換算下來恰好落在原始輸出尺寸邊界上；圖面本身不含任何文字標籤，並統一預留${A4_MARGIN_MM}mm列印邊界，可直接以家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，不要選擇縮放至頁面），列印後沿對位十字所在邊界裁切即為原始輸出尺寸，各圖層比例與座標完全一致，方便疊合裁切、打孔對位。CMYK數值是標準公式換算（非印刷廠ICC色彩描述檔校正過的顏色），適合家用/一般印刷；如需搭配特定印刷標準色域，請自行在印刷軟體/RIP端指定描述檔。
 
 ${modeNote}
 
@@ -1780,7 +1903,7 @@ ${modeNote}
 日式似顏繪風格所使用的CartoonGAN模型權重（宮崎駿吉卜力風/細田守風/今敏風/新海誠風）採MIT授權，向原作者 Yijun Li 等人致謝：https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch
 `;
       files['README.txt'] = strToBytes(readme);
-      const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PNG本身已壓縮過，圖層檔案不需再壓一次
+      const zipped = fflate.zipSync(files, {level:0}); // level:0 = 僅封裝不壓縮，PDF內圖片已用FlateDecode壓縮過，不需再壓一次
       const zipBlob = new Blob([zipped], {type:'application/zip'});
       downloadBlob(zipBlob, 'photo-lithobox-layers.zip');
       setStatus(`完成，ZIP 已下載，內含 ${Object.keys(files).length} 個檔案（含說明文件）。`);
