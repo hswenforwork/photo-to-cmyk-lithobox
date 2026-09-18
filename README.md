@@ -12,7 +12,7 @@
 
 **下載列印圖層**：所有列印用圖層（原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版）會自動排版到儘量少張的A4紙上——同一張A4能放下幾張圖層就放幾張，並統一預留5mm列印邊界；圖面本身不含任何文字標籤，只保留裁切用的虛線框。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝輸出尺寸+10mm），四角十字線／打孔圓點對位記號（固定直徑3mm）畫在這個外擴後的新邊界，換算下來恰好落在原始輸出尺寸的邊界上。所有頁面會合併輸出成**單一PDF檔案**（不再是個別PNG檔），每頁一張圖片、色彩空間為**DeviceCMYK**（適合印刷用途，避免RGB送印時被印刷軟體/驅動程式自行做不可預期的色彩轉換），可直接家用印表機列印。打包下載ZIP時可勾選是否同時包含另一種風格的檔案。
 
-**CMYK色彩轉換說明**：目前PDF內的CMYK數值是標準公式換算（K=1-max(R,G,B)，其餘channel依K再正規化），純粹的數值轉換，**並未嵌入印刷廠專用的ICC色彩描述檔**（如US Web Coated SWOP v2、Japan Color 2001 Coated、Fogra39等）作為PDF的OutputIntent——這類描述檔屬於Adobe/SWOP/ICC等單位發布的授權內容，只能從color.org、Adobe或印刷廠官方網站下載，本專案的開發流程中網路存取受限、無法取得這些檔案的二進位內容，因此目前輸出的CMYK PDF是裝置獨立的近似值，不是經過特定印刷標準油墨/紙張特性校正過的顏色。若您有實際印刷廠指定的ICC描述檔（`.icc`檔案），可以提供給後續開發流程加入PDF的OutputIntent；一般家用或桌上雷射印表機直接使用目前的CMYK數值即可正常列印。
+**CMYK色彩轉換說明**：PDF內的CMYK數值本身是標準公式換算（K=1-max(R,G,B)，其餘channel依K再正規化），純粹的數值轉換，不是經過ICC色彩管理的轉換。PDF另外會內嵌「Japan Color 2011 Coated」印刷色域描述檔（`assets/JapanColor2011Coated.icc`，取自ICC色彩描述檔登錄資料庫 https://registry.color.org/profile-registry/JapanColor2011Coated ，授權允許使用/嵌入PDF/交換/分享，檔案內容未經修改）作為PDF的OutputIntent（`/S /GTS_PDFX`），這是業界慣用的「印刷就緒PDF」宣告方式，讓支援的印刷軟體/RIP知道這份CMYK數值對應的印刷條件依據；描述檔約1.9MB，首次下載時瀏覽器會另外抓取一次並快取，下載失敗時仍會正常產生PDF，只是不含這項宣告。一般家用或桌上印表機直接使用目前的CMYK數值即可正常列印。
 
 **下載/匯出絕不會重新執行日式似顏繪風格AI**：一律直接沿用④「產生／更新預覽」已經算好的結果放大使用。任何會改變AI輸入內容的操作（上傳新照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩開關/清除/手動繪製/AI偵測、切換畫風）都會讓這份快取立即視為過期；下載列印頁面、ZIP打包（含「同時包含另一種外層裝飾層模式」）任何一個下載按鈕，只要目前選到的模式是日式似顏繪風格且快取不存在或已過期，都會直接被擋下並顯示清楚的提示訊息，而不會靜默地在下載當下重新跑一次AI或送出跟預覽不一致的內容。
 
@@ -36,12 +36,13 @@ assets/
   u2netp.onnx        — AI主體偵測模型（U^2-Net輕量版，來自 danielgatis/rembg 專案，Apache-2.0授權）
   tfjs.min.js / tfjs-backend-wasm*    — TensorFlow.js（日式似顏繪風格AI推論引擎，Apache-2.0授權）
   cartoon-gan/{hayao,hosoda,paprika,shinkai}/ — CartoonGAN四種日式動畫風格模型（MIT授權，權重來自 Yijun Li 等原作者：https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch ，經TensorFlow.js格式轉換）
+  JapanColor2011Coated.icc — 下載PDF內嵌的印刷色域描述檔（取自ICC色彩描述檔登錄資料庫 https://registry.color.org/profile-registry/JapanColor2011Coated ，授權允許使用/嵌入PDF/交換/分享，檔案內容未經修改）
 ```
 
 ## 隱私與離線說明
 
 - 照片只在使用者自己的瀏覽器裡處理（Canvas運算＋本機AI推論），不會上傳到任何伺服器。
-- 唯一的網路連線是「首次使用某項AI功能時，瀏覽器向同一個網站下載 assets/ 裡對應的程式庫與AI模型檔案」（AI主體偵測約19MB、日式似顏繪風格每種畫風約13MB，皆只會下載一次，之後瀏覽器會快取），這與照片內容完全無關。
+- 唯一的網路連線是「首次使用某項功能時，瀏覽器向同一個網站下載 assets/ 裡對應的程式庫/模型/描述檔」（AI主體偵測約19MB、日式似顏繪風格每種畫風約13MB、下載列印PDF用的CMYK印刷色域描述檔約1.9MB，皆只會下載一次，之後瀏覽器會快取），這與照片內容完全無關。
 - 頁面已設定 Content-Security-Policy 限制對外連線僅能是同網站內的資源（`connect-src 'self'`），技術性防止任何第三方連線；`script-src` 因TensorFlow.js執行時需要而包含 `'unsafe-eval'`，僅影響本頁自身程式碼的執行彈性，不影響前述的連線限制。
 
 ## 已知限制 / 之後可能的加強方向
