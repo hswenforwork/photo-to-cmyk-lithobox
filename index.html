@@ -29,8 +29,15 @@
     background:var(--panel); border:1px solid #2a2e38; border-radius:12px;
     padding:16px; margin-bottom:16px;
   }
-  h2{font-size:1rem; margin:0 0 12px; color:var(--accent);}
+  h2{font-size:1rem; margin:0; color:var(--accent);}
   h3{font-size:0.88rem; margin:14px 0 6px; color:var(--muted); font-weight:600;}
+  .panel-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin:0 0 12px; cursor:pointer; user-select:none;
+  }
+  .panel-toggle{font-size:0.75rem; color:var(--muted); flex:0 0 auto; margin-left:8px; transition:transform .15s;}
+  .panel.collapsed .panel-toggle{transform:rotate(-90deg);}
+  .panel.collapsed .panel-body{display:none;}
   label{display:block; font-size:0.82rem; color:var(--muted); margin:10px 0 4px;}
   input[type=range]{width:100%;}
   select, input[type=text]{
@@ -82,7 +89,11 @@
   .note{font-size:0.78rem; color:var(--muted); margin-top:8px;}
   .badge{display:inline-block; font-size:0.72rem; padding:2px 8px; border-radius:10px; background:#2a2e38; color:var(--muted); margin-left:6px;}
   .statusLine{font-size:0.8rem; color:var(--accent2); margin-top:8px; min-height:1.2em;}
-  footer{max-width:1400px; margin:0 auto; padding:0 24px 40px; color:var(--muted); font-size:0.78rem;}
+  footer{max-width:1400px; margin:0 auto; padding:20px 24px 40px; color:var(--muted); font-size:0.78rem; border-top:1px solid #2a2e38;}
+  footer h3{margin-top:0;}
+  footer ul{margin:0; padding-left:1.2em;}
+  footer li{margin-bottom:8px;}
+  footer li:last-child{margin-bottom:0;}
   a{color:var(--accent);}
   .dimHint{font-size:0.76rem; color:var(--muted); margin-top:2px;}
   .hidden{display:none !important;}
@@ -93,7 +104,7 @@
 <header>
   <h1>照片轉線稿＋CMYK分層＋3D浮雕工具<span class="badge">3D列印燈箱用</span></h1>
   <div class="privacy-banner">
-    🔒 所有影像處理（含AI主體偵測、日式似顏繪風格轉換）都在您的瀏覽器本機完成，照片<strong>不會上傳到任何伺服器</strong>。本頁只會讀取與自己同一個網站內的檔案（例如 assets/ 資料夾裡的AI模型、程式庫），不會連線到任何第三方伺服器；頁面的 Content-Security-Policy 已技術性限制對外連線僅能是同網站內的資源。可部署於 GitHub Pages 等靜態託管，AI主體偵測首次使用約需下載19MB模型資料，日式似顏繪風格轉換每種畫風首次使用約需下載13MB模型資料（皆僅模型本身，與您的照片內容無關），瀏覽器快取後之後可離線使用。
+    🔒 所有影像處理（含AI主體偵測、日式似顏繪風格轉換）都在您的瀏覽器本機完成，照片<strong>不會上傳到任何伺服器</strong>。
   </div>
 </header>
 
@@ -101,13 +112,16 @@
   <!-- 左側：上傳、尺寸、裁切、參數 -->
   <div>
     <section class="panel">
-      <h2>① 上傳照片</h2>
+      <div class="panel-header"><h2>① 上傳照片</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="dropzone" id="dropzone">拖曳照片到這裡，或點擊選擇檔案<br><span class="dimHint">建議使用清晰、對比明確的生活照</span></div>
       <input type="file" id="fileInput" accept="image/*" class="hidden">
+      </div>
     </section>
 
     <section class="panel">
-      <h2>② 輸出尺寸</h2>
+      <div class="panel-header"><h2>② 輸出尺寸</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <label>紙張／燈箱尺寸</label>
       <select id="sizeSelect">
         <option value="A5" selected>A5（148 × 210 mm）</option>
@@ -121,11 +135,13 @@
         <option value="landscape">橫向</option>
       </select>
       <div class="dimHint" id="dimHint">解析度：—</div>
-      <div class="dimHint">固定 600 DPI（一般家用印表機常見規格）</div>
+      <div class="dimHint">固定 600 DPI</div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>③ 裁切構圖</h2>
+      <div class="panel-header"><h2>③ 裁切構圖</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="cropWrap" id="cropWrap">
         <canvas id="cropCanvas"></canvas>
         <canvas id="maskCanvas"></canvas>
@@ -147,11 +163,13 @@
       <label>筆刷大小 <span class="value-pill" id="brushVal">40</span></label>
       <input type="range" id="brushRange" min="8" max="150" value="40">
       <button class="btn" id="maskClear" type="button">清除遮罩重新標記</button>
-      <div class="note">可以先按「自動偵測主體」讓AI辨識人物/動物輪廓，再用「標記主體／擦除」筆刷手動微調（補畫或去除誤判區域），類似似顏繪只勾勒主體、忽略背景雜訊。請先完成上方裁切構圖再進行標記；若之後又調整了裁切位置，建議清除後重新標記一次。</div>
+      <div class="note">可先按「自動偵測主體」讓AI辨識人物/動物輪廓，再用「標記主體／擦除」筆刷手動微調。請先完成上方裁切構圖再進行標記；若之後調整了裁切位置，建議清除後重新標記一次。</div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>④ 參數調整</h2>
+      <div class="panel-header"><h2>④ 參數調整</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <h3>外層裝飾層風格</h3>
       <div class="tabs" id="lineModeTabs">
         <div class="tab active" data-linemode="anime">日式似顏繪風格</div>
@@ -177,7 +195,7 @@
         <input type="range" id="animeTempRange" min="-100" max="100" value="0">
         <label>飽和度 <span class="value-pill" id="animeSatVal">0</span></label>
         <input type="range" id="animeSatRange" min="-100" max="100" value="0">
-        <div class="note">日式似顏繪風格採用本機執行的 AI 圖像風格轉換模型（CartoonGAN，MIT授權，向 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者致謝），將照片轉換為帶有簡單色彩、俐落墨線的日式動畫風格全彩插畫，效果會依上方主體遮罩只套用在主體範圍內（範圍外呈現白底）。首次切換到某個畫風時需要下載約13MB模型資料，之後瀏覽器會快取。<strong>由於AI運算成本較高，預覽不會隨裁切/縮放/尺寸調整即時自動更新</strong>，請先完成①～③（上傳、尺寸、裁切）與主體遮罩設定後，按上方按鈕產生預覽。上方「似顏繪細緻度」「色調」「色溫」「飽和度」四個滑桿都只是輕量後製調整（非AI，皆為canvas運算），拖曳時會即時套用在最近一次的AI結果上、不需要重新跑AI：細緻度往負值方向會讓畫面更簡化、更接近平塗色塊，往正值方向會加強線條與紋理細節的銳利度；色調會整體旋轉色相；色溫往負值會偏冷藍、往正值會偏暖橘；飽和度往負值會降低彩度（趨近灰階）、往正值會提高彩度。<strong>下載時一律直接沿用這裡已經產生好的AI結果放大使用，絕不會重新觸發AI運算</strong>（避免下載時另外用不同解析度重新跑AI，這在少數顯示卡/驅動上曾造成shader編譯錯誤），並套用當下四個滑桿的數值。<strong>因此若照片、裁切位置/縮放、輸出尺寸、直向/橫向、水平鏡像、主體遮罩或畫風有任何變動，這裡的預覽會自動視為過期，下載前必須重新按一次「產生／更新預覽」，否則下載會被擋下並顯示提示訊息。</strong>（技術備註：此AI函式庫執行時需要頁面的CSP開放 'unsafe-eval'，僅影響本頁自身程式碼的執行彈性，不影響「照片不上傳到任何伺服器」的網路連線限制，connect-src 仍僅允許同網站內的資源。）</div>
+        <div class="note">先完成①～③（上傳、尺寸、裁切）與主體遮罩設定，按上方按鈕產生預覽（AI運算需要一點時間，不會隨裁切/縮放/尺寸調整自動更新）。下方四個滑桿為即時後製微調，拖曳時直接套用在已產生的預覽上：細緻度負值簡化平塗、正值加強線條銳利度；色調整體旋轉色相；色溫負值偏冷藍、正值偏暖橘；飽和度負值趨近灰階、正值加強彩度。<strong>若照片、裁切、尺寸、方向、鏡像、遮罩或畫風有變動，預覽會視為過期，下載前需重新按一次「產生／更新預覽」。</strong></div>
       </div>
 
       <div id="sketchLineControls" class="hidden">
@@ -187,7 +205,6 @@
         <input type="range" id="sketchHatchRange" min="1" max="100" value="50">
         <label>筆觸深淺 <span class="value-pill" id="sketchStrengthVal">60</span></label>
         <input type="range" id="sketchStrengthRange" min="0" max="100" value="60">
-        <div class="note">素描風效果為第一階段的程式化濾鏡（非AI模型）：以「負片＋模糊＋加亮混合」模擬明暗骨架，再疊加固定角度交叉排線模擬筆觸紋理，效果會依上方主體遮罩只套用在主體範圍內。</div>
       </div>
 
       <h3>灰階高度圖（3D列印用）</h3>
@@ -204,13 +221,15 @@
       <input type="range" id="mRange" min="0" max="200" value="100">
       <label>Yellow 黃 <span class="value-pill" id="yVal">100%</span></label>
       <input type="range" id="yRange" min="0" max="200" value="100">
+      </div>
     </section>
   </div>
 
   <!-- 右側：預覽與輸出 -->
   <div>
     <section class="panel">
-      <h2>即時預覽 — 各圖層</h2>
+      <div class="panel-header"><h2>即時預覽 — 各圖層</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="layerGrid">
         <div class="layerCard">
           <canvas id="prevOriginal"></canvas>
@@ -237,10 +256,12 @@
           <div class="cap" style="color:var(--y-col)">Yellow 黃版</div>
         </div>
       </div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>即時合成預覽（模擬背光疊合）</h2>
+      <div class="panel-header"><h2>即時合成預覽（模擬背光疊合）</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="tabs">
         <div class="tab active" data-mode="off">熄燈（外層裝飾）</div>
         <div class="tab" data-mode="on">點燈（全彩背光）</div>
@@ -255,20 +276,23 @@
       <div class="compositeCanvasWrap">
         <canvas id="compositeCanvas"></canvas>
       </div>
-      <div class="note">「熄燈」模擬燈箱最外層裝飾層在環境光下的樣子（會跟著下方④選的外層裝飾層風格切換）；「點燈」疊合灰階浮雕遮光＋C/M/Y透光減色混合＋最外層裝飾層，並依背光色溫滑桿（3000K～6500K）換算實際色光後以色彩混合方式疊加，模擬LED背光穿透多層材料後的色偏。這仍是近似模擬，實際效果請以實體列印、雷射雕刻與3D列印測試為準。</div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>⑤ 下載列印圖層</h2>
+      <div class="panel-header"><h2>⑤ 下載列印圖層</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="btn-row">
         <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">「下載列印頁面」會把原始照片、灰階高度圖、外層裝飾層、C/M/Y三色版等所有列印用圖層，依實際輸出尺寸自動排版到儘量少的 A4 紙（210×297mm，600dpi，預留5mm列印邊界）上——同一張A4紙能放下幾張圖層就放幾張，超過則自動分到第2、3…頁，最後輸出成單一PDF檔案（每頁一張圖片，色彩空間為DeviceCMYK，適合印刷用途）。每張圖層都會在步驟①輸出尺寸的邊界外再外擴5mm留白出血邊（實際物理尺寸＝步驟①尺寸+10mm），對位十字＋打孔圓點記號（固定直徑3mm）畫在出血邊的正中央，即距離外擴後邊界2.5mm處，跟⑥3D列印底板四角對位孔的位置對齊，方便組裝時用同一組螺絲/銷釘對位；圖面本身不含任何文字標籤。可直接下載後用家用印表機列印（請於印表機設定選擇「實際尺寸／100%」，勿選擇縮放至頁面），列印後沿步驟①設定的實際輸出尺寸邊界（對位十字內側2.5mm處）裁切即可。所有圖層皆為依序產生、逐一釋放記憶體，避免一次性佔用過多瀏覽器記憶體。<strong>CMYK色彩說明</strong>：RGB→CMYK採標準數值公式換算（K=1-max(R,G,B)等），本身不是經過ICC色彩管理的轉換；但PDF會內嵌「Japan Color 2011 Coated」印刷色域描述檔作為OutputIntent（首次下載時瀏覽器會另外下載約1.9MB的描述檔案，僅需一次），讓支援的印刷軟體/RIP知道這份CMYK數值對應的印刷條件依據，是業界常見的「印刷就緒PDF」宣告方式；描述檔下載失敗時仍會正常產生PDF，只是不含這項宣告。若外層裝飾層使用日式似顏繪風格，下載一律直接沿用④已經產生好且仍對應目前設定的AI預覽結果放大使用，<strong>絕不會在下載時重新觸發AI運算</strong>；尚未產生過預覽、或預覽已因照片/裁切/尺寸/遮罩/畫風變動而過期時，下載會被擋下並提示先回到④按「產生／更新預覽」。</div>
+      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩）。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>⑥ 3D列印模型匯出（STL）</h2>
+      <div class="panel-header"><h2>⑥ 3D列印模型匯出（STL）</h2><span class="panel-toggle">▼</span></div>
+      <div class="panel-body">
       <div class="row">
         <div>
           <label>底板厚度 (mm)</label>
@@ -284,13 +308,23 @@
       <div class="dimHint" id="meshEstimate"></div>
       <button class="btn primary" id="dlStl">產生並下載 STL</button>
       <div class="statusLine" id="statusLineStl"></div>
-      <div class="note">依「④灰階高度圖」的亮度／對比／反轉設定計算浮雕：白＝薄、黑＝厚（或依反轉設定對調），厚度＝底板厚度＋最大浮雕厚度×明暗比例，輸出為含底面與四周側壁的封閉實體，可直接匯入 Cura / PrusaSlicer / Bambu Studio 等切片軟體。目前提供 STL（相容性最廣）；3MF 格式較複雜、暫未提供，未來如有需要可再補上。</div>
+      <div class="note">依「④灰階高度圖」的亮度／對比／反轉設定計算浮雕：白＝薄、黑＝厚（或依反轉設定對調）。輸出為含底面與四周側壁的封閉實體，可直接匯入 Cura / PrusaSlicer / Bambu Studio 等切片軟體。</div>
+      </div>
     </section>
   </div>
 </main>
 
-<footer>
-  本工具為純前端網頁應用（含本機執行的AI主體偵測、日式似顏繪風格AI轉換），原始碼可直接部署於 GitHub Pages 等靜態託管服務：把整個資料夾（index.html 與 assets/）上傳到您的 GitHub repo 並開啟 GitHub Pages 即可，無需任何後端伺服器。
+<footer id="footerInfo">
+  <h3>關於本工具</h3>
+  <p>本工具為純前端網頁應用，所有影像處理（含AI主體偵測、日式似顏繪風格轉換）都在您的瀏覽器本機完成，照片不會上傳到任何伺服器。原始碼可直接部署於 GitHub Pages 等靜態託管服務：把整個資料夾（index.html 與 assets/）上傳到您的 GitHub repo 並開啟 GitHub Pages 即可，無需任何後端伺服器。</p>
+
+  <h3>使用的第三方套件與模型、授權、致謝</h3>
+  <ul>
+    <li><strong>AI主體偵測</strong>：U²-Net輕量版模型（來自 <a href="https://github.com/danielgatis/rembg" target="_blank" rel="noopener">danielgatis/rembg</a> 專案，Apache-2.0授權），透過 onnxruntime-web（Apache-2.0授權）在本機執行，首次使用約需下載19MB模型資料，瀏覽器快取後可離線使用。</li>
+    <li><strong>日式似顏繪風格AI</strong>：CartoonGAN圖像風格轉換模型（MIT授權，權重來自 <a href="https://github.com/Yijunmaverick/CartoonGAN-Test-Pytorch-Torch" target="_blank" rel="noopener">Yijun Li</a> 等原作者，經TensorFlow.js格式轉換），透過 TensorFlow.js（Apache-2.0授權）在本機執行，每種畫風首次使用約需下載13MB模型資料。此AI函式庫執行時需要頁面CSP開放'unsafe-eval'，僅影響本頁自身程式碼執行彈性，不影響「照片不上傳到任何伺服器」的連線限制（connect-src僅允許同網站內資源）。</li>
+    <li><strong>PDF壓縮</strong>：fflate函式庫（MIT授權），用於PDF內部影像資料FlateDecode壓縮。</li>
+    <li><strong>CMYK印刷色域描述檔</strong>：PDF內嵌「Japan Color 2011 Coated」ICC描述檔（取自 <a href="https://registry.color.org/profile-registry/JapanColor2011Coated" target="_blank" rel="noopener">ICC色彩描述檔登錄資料庫</a>，授權允許使用/嵌入PDF/交換/分享，檔案內容未經修改）作為PDF的OutputIntent，讓支援的印刷軟體/RIP知道CMYK數值對應的印刷條件依據；首次下載PDF時瀏覽器會另外下載約1.9MB描述檔並快取，下載失敗時仍會正常產生PDF，只是不含這項宣告。RGB→CMYK本身採標準數值公式換算（K=1-max(R,G,B)等），不是經過ICC色彩管理的轉換。</li>
+  </ul>
 </footer>
 
 <script src="./assets/fflate.umd.js"></script>
@@ -298,6 +332,13 @@
 <script>
 (function(){
   "use strict";
+
+  // ---------- 步驟操作框摺疊/展開：點擊標題列切換該區塊內容顯示，方便微調參數時對照右側預覽 ----------
+  document.querySelectorAll('.panel-header').forEach(headerEl => {
+    headerEl.addEventListener('click', () => {
+      headerEl.closest('.panel').classList.toggle('collapsed');
+    });
+  });
 
   if(typeof ort !== 'undefined'){
     // 不手動指定 wasmPaths：onnxruntime-web 會依 ort.min.js 自己被載入的路徑（也就是 assets/ 資料夾）
@@ -564,6 +605,7 @@
 
   // ---------- 狀態 ----------
   let img = null;              // 原始圖片 Image 物件
+  let uploadedFileName = '';   // 原始上傳照片檔名（不含副檔名），用於組合輸出檔名
   let crop = { zoom:1, offX:0, offY:0 }; // offX/offY 為圖片中心相對於框中心的位移(以框為單位的px, 隨拖曳更新)
   let dragging = false, dragStart = null;
 
@@ -582,6 +624,7 @@
   });
 
   function loadFile(file){
+    uploadedFileName = file.name.replace(/\.[^.]+$/, ''); // 去除副檔名，保留主檔名供輸出檔名使用
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.onload = function(){
@@ -1767,6 +1810,15 @@
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }
 
+  // 輸出檔名固定格式：YY-MM-DD HH-MM_原始照片檔名.副檔名（"/"無法用於檔名，故日期時間以"-"分隔）
+  function buildOutputFilename(ext){
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const stamp = `${pad(now.getFullYear()%100)}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
+    const base = uploadedFileName || 'output';
+    return `${stamp}_${base}.${ext}`;
+  }
+
   function strToBytes(str){ return new TextEncoder().encode(str); }
   function concatBytes(arrays){
     let total = 0;
@@ -1962,7 +2014,7 @@
       await new Promise(r=>setTimeout(r,0));
       const pdfBlob = pagesToPdfBlob(pages, iccProfileBytes);
       for(let i=0;i<pages.length;i++){ pages[i].width = 0; pages[i].height = 0; }
-      downloadBlob(pdfBlob, 'print-pages.pdf');
+      downloadBlob(pdfBlob, buildOutputFilename('pdf'));
       setStatus(`完成，已下載 ${pages.length} 頁的PDF（CMYK色彩${iccProfileBytes ? '，已嵌入Japan Color 2011 Coated色域描述檔' : ''}，列印時請設定「實際尺寸／100%」，不要選擇縮放至頁面）。`);
     } catch(err){
       setStatus('產生列印頁面失敗：'+err.message);
@@ -2208,7 +2260,7 @@
       collectHeightmapTriangles(triangles, gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert, STL_BLEED_MM, STL_BLEED_MM);
       collectFrameTriangles(triangles, wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM, STL_BLEED_MM, baseT, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
       const blob = serializeSTL(triangles);
-      downloadBlob(blob, 'relief-model.stl');
+      downloadBlob(blob, buildOutputFilename('stl'));
       statusEl.textContent = `完成，STL已下載（${gw}×${gh} 浮雕網格，底板外擴${STL_BLEED_MM}mm並於四角開直徑${STL_HOLE_DIAMETER_MM}mm對位孔，底板${baseT}mm＋浮雕最高${reliefT}mm）。`;
     } catch(err){
       statusEl.textContent = '產生STL失敗：'+err.message;
