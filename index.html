@@ -9,7 +9,7 @@
   :root{
     --bg:#14161a; --panel:#1d2026; --panel2:#242832; --line:#33384433;
     --text:#e8eaf0; --muted:#9aa1b0; --accent:#5fb0ff; --accent2:#ff9f5f;
-    --c-col:#00b7d6; --m-col:#e8299a; --y-col:#f0c400; --ok:#4fd18b; --warn:#ff6868;
+    --ok:#4fd18b; --warn:#ff6868;
   }
   *{box-sizing:border-box;}
   body{
@@ -213,14 +213,6 @@
       <label>對比 <span class="value-pill" id="contrastVal">0</span></label>
       <input type="range" id="contrastRange" min="-100" max="100" value="0">
       <label><input type="checkbox" id="invertHeight" style="width:auto; display:inline-block; margin-right:6px;">反轉（白=薄／黑=厚 對調）</label>
-
-      <h3>CMY 通道濃度</h3>
-      <label>Cyan 青 <span class="value-pill" id="cVal">100%</span></label>
-      <input type="range" id="cRange" min="0" max="200" value="100">
-      <label>Magenta 洋紅 <span class="value-pill" id="mVal">100%</span></label>
-      <input type="range" id="mRange" min="0" max="200" value="100">
-      <label>Yellow 黃 <span class="value-pill" id="yVal">100%</span></label>
-      <input type="range" id="yRange" min="0" max="200" value="100">
       </div>
     </section>
   </div>
@@ -242,18 +234,6 @@
         <div class="layerCard">
           <canvas id="prevLine"></canvas>
           <div class="cap" id="prevLineCap">日式似顏繪風格（熄燈裝飾層）</div>
-        </div>
-        <div class="layerCard">
-          <canvas id="prevC"></canvas>
-          <div class="cap" style="color:var(--c-col)">Cyan 青版</div>
-        </div>
-        <div class="layerCard">
-          <canvas id="prevM"></canvas>
-          <div class="cap" style="color:var(--m-col)">Magenta 洋紅版</div>
-        </div>
-        <div class="layerCard">
-          <canvas id="prevY"></canvas>
-          <div class="cap" style="color:var(--y-col)">Yellow 黃版</div>
         </div>
       </div>
       </div>
@@ -1546,23 +1526,19 @@
     const brightness = +document.getElementById('brightRange').value;
     const contrast = +document.getElementById('contrastRange').value;
     const invert = document.getElementById('invertHeight').checked;
-    const cS = +document.getElementById('cRange').value;
-    const mS = +document.getElementById('mRange').value;
-    const yS = +document.getElementById('yRange').value;
 
     const grayRaw = toGray(imageData);
     const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
 
     const grayCanvas = renderGrayCanvas(gray, w, h, wmm, hmm, invert);
-    const cCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'c', cS);
-    const mCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'm', mS);
-    const yCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'y', yS);
+    // C/M/Y已不再是使用者可調整、也不再單獨顯示的圖層，固定用100%濃度計算，
+    // 只供下方「即時合成預覽」點燈模式的全彩混色使用
+    const cCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'c', 100);
+    const mCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'm', 100);
+    const yCanvas = renderChannelCanvas(imageData, w, h, wmm, hmm, 'y', 100);
     const originalCanvas = renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm);
 
     drawInto('prevGray', grayCanvas);
-    drawInto('prevC', cCanvas);
-    drawInto('prevM', mCanvas);
-    drawInto('prevY', yCanvas);
     drawInto('prevOriginal', originalCanvas);
 
     const prevLineCanvas = lastPreviewLayers ? lastPreviewLayers.lineCanvas : null;
@@ -1676,9 +1652,6 @@
   const bindings = [
     ['brightRange','brightVal', v=>v],
     ['contrastRange','contrastVal', v=>v],
-    ['cRange','cVal', v=>v+'%'],
-    ['mRange','mVal', v=>v+'%'],
-    ['yRange','yVal', v=>v+'%'],
     ['sketchShadeRange','sketchShadeVal', v=>v],
     ['sketchHatchRange','sketchHatchVal', v=>v],
     ['sketchStrengthRange','sketchStrengthVal', v=>v],
