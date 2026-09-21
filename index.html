@@ -286,7 +286,7 @@
         <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩）。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
+      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩），內含原始照片、灰階高度圖、外層裝飾層三張圖層。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。<strong>外層裝飾層圖層會自動左右鏡像翻轉後再輸出</strong>，與畫面預覽方向相反。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
       </div>
     </section>
 
@@ -306,6 +306,7 @@
       <label>網格精細度 <span class="value-pill" id="meshVal">150</span></label>
       <input type="range" id="meshRange" min="60" max="400" value="150">
       <div class="dimHint" id="meshEstimate"></div>
+      <label style="margin-top:10px;"><input type="checkbox" id="stlBaseOnly" style="width:auto; display:inline-block; margin-right:6px;">僅輸出底板（固定底板厚度＋四角定位孔，不含浮雕）</label>
       <button class="btn primary" id="dlStl">產生並下載 STL</button>
       <div class="statusLine" id="statusLineStl"></div>
       <div class="note">依「④灰階高度圖」的亮度／對比／反轉設定計算浮雕：白＝薄、黑＝厚（或依反轉設定對調）。輸出為含底面與四周側壁的封閉實體，可直接匯入 Cura / PrusaSlicer / Bambu Studio 等切片軟體。</div>
@@ -994,9 +995,9 @@
     drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm, markColor || 'rgba(150,70,255,0.85)');
     return c;
   }
-  // 下載/匯出用：外擴出血邊
+  // 下載/匯出用：外擴出血邊，並水平鏡像翻轉（外層裝飾層列印圖層固定與畫面預覽左右相反）
   function renderSketchPrintCanvas(sketchGray, w, h, wmm, hmm, markColor){
-    return addPrintBleed(sketchContentCanvas(sketchGray, w, h), wmm, hmm, markColor || 'rgba(150,70,255,0.85)');
+    return addPrintBleed(mirrorCanvasHorizontally(sketchContentCanvas(sketchGray, w, h)), wmm, hmm, markColor || 'rgba(150,70,255,0.85)');
   }
 
   // 遮罩外區域填白（用於全彩AI風格圖層：只呈現主體，忽略背景），直接在原canvas上繪製並回傳
@@ -1113,9 +1114,10 @@
     drawAlignmentMarks(ctx, w, h, wmm, hmm, 'rgba(0,0,0,0.55)');
     return c;
   }
-  // 下載/匯出用：外擴出血邊（resizedCanvas已經是純內容、無對位記號）
+  // 下載/匯出用：外擴出血邊，並水平鏡像翻轉（外層裝飾層列印圖層固定與畫面預覽左右相反；
+  // resizedCanvas已經是純內容、無對位記號）
   function renderAnimePrintCanvas(resizedCanvas, wmm, hmm){
-    return addPrintBleed(resizedCanvas, wmm, hmm, 'rgba(0,0,0,0.55)');
+    return addPrintBleed(mirrorCanvasHorizontally(resizedCanvas), wmm, hmm, 'rgba(0,0,0,0.55)');
   }
 
   // 依目前選中的外層裝飾層模式，計算「熄燈裝飾層」的預覽用canvas（低解析度，供即時預覽/合成預覽使用）
@@ -1204,6 +1206,17 @@
     ctx.restore();
   }
 
+  // 水平鏡像翻轉整張canvas內容（僅用於外層裝飾層的下載/匯出圖層，讓列印結果與螢幕預覽左右相反）
+  function mirrorCanvasHorizontally(canvas){
+    const w = canvas.width, h = canvas.height;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(canvas, 0, 0);
+    return c;
+  }
+
   // 下載/匯出專用：把已經畫好的內容canvas（尺寸=wmm×hmm）放進一張外擴PRINT_BLEED_MM的新畫布正中央
   // （四周留白），並在新畫布的外緣重新畫上對位十字＋打孔記號，中心距離外擴後邊界PRINT_MARK_INSET_MM
   // （出血邊中點，跟3D列印底板的對位孔位置對齊）。只用於下載/匯出，不影響畫面即時預覽。
@@ -1270,10 +1283,6 @@
     drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm,channelMarkColor(channel));
     return c;
   }
-  function renderChannelPrintCanvas(imageData, w, h, wmm, hmm, channel, strength){
-    return addPrintBleed(channelContentCanvas(imageData, w, h, channel, strength), wmm, hmm, channelMarkColor(channel));
-  }
-
   // 原始種片：裁切構圖過後的原始彩色照片，作為額外輸出圖層（供對照排版/存檔使用），同樣加上對位記號
   function renderOriginalCanvasWithMarks(imageData, w, h, wmm, hmm){
     const c = document.createElement('canvas'); c.width=w; c.height=h;
@@ -1752,9 +1761,6 @@
     const brightness = +document.getElementById('brightRange').value;
     const contrast = +document.getElementById('contrastRange').value;
     const invert = document.getElementById('invertHeight').checked;
-    const cS = +document.getElementById('cRange').value;
-    const mS = +document.getElementById('mRange').value;
-    const yS = +document.getElementById('yRange').value;
 
     const srcCanvas = getCroppedCanvas(w,h);
     const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
@@ -1768,9 +1774,6 @@
       { label:'灰階高度圖', make: () => renderGrayPrintCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
       { label: modeLabel(lineArtMode), make: async () => { primary = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm); return primary.lineCanvas; } },
     ];
-    jobs.push({ label:'Cyan版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'c', cS) });
-    jobs.push({ label:'Magenta版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'm', mS) });
-    jobs.push({ label:'Yellow版', make: () => renderChannelPrintCanvas(imageData, w, h, wmm, hmm, 'y', yS) });
 
     const pages = [];
     let curPage = null, idxOnPage = 0;
@@ -2196,6 +2199,14 @@
     collectFlatPatchTriangles(triangles, outerWmm-b, b, outerWmm, outerHmm-b, 0, baseT, null, cellSize);
   }
 
+  // 「僅輸出底板」模式：整個outerWmm x outerHmm範圍都是同一片固定厚度baseT的平板（不含浮雕），
+  // 四角同樣開對位孔；直接重用collectFrameTriangles（邊框，含四角孔）再補上中央區塊（無孔平板），
+  // 兩者互不重疊、邊界密合，組合起來就是一片完整的底板
+  function collectBaseplateOnlyTriangles(triangles, outerWmm, outerHmm, bleedMm, baseT, holeInsetMm, holeDiameterMm, cellSize){
+    collectFrameTriangles(triangles, outerWmm, outerHmm, bleedMm, baseT, holeInsetMm, holeDiameterMm, cellSize);
+    collectFlatPatchTriangles(triangles, bleedMm, bleedMm, outerWmm-bleedMm, outerHmm-bleedMm, 0, baseT, null, cellSize);
+  }
+
   // 把收集好的三角形陣列（每9個數字一組）序列化為二進位STL Blob
   function serializeSTL(triangles){
     const totalTri = triangles.length/9;
@@ -2235,10 +2246,23 @@
   document.getElementById('dlStl').addEventListener('click', async ()=>{
     const statusEl = document.getElementById('statusLineStl');
     if(!img){ statusEl.textContent = '請先上傳照片。'; return; }
-    statusEl.textContent = '處理中，正在產生3D網格，請稍候…';
+    const baseOnly = document.getElementById('stlBaseOnly').checked;
+    statusEl.textContent = baseOnly ? '處理中，正在產生底板網格，請稍候…' : '處理中，正在產生3D網格，請稍候…';
     await new Promise(r=>setTimeout(r,30));
     try{
       const {w,h,wmm,hmm} = fullPixelSize();
+      const baseT = Math.max(0.2, +document.getElementById('baseThicknessInput').value || 1.0);
+      const triangles = [];
+
+      if(baseOnly){
+        // 僅輸出底板：整片outerWmm x outerHmm都是固定厚度baseT的平板（含四角定位孔），不含浮雕
+        collectBaseplateOnlyTriangles(triangles, wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM, STL_BLEED_MM, baseT, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
+        const blob = serializeSTL(triangles);
+        downloadBlob(blob, buildOutputFilename('stl'));
+        statusEl.textContent = `完成，底板STL已下載（僅底板，厚度${baseT}mm，外擴${STL_BLEED_MM}mm並於四角開直徑${STL_HOLE_DIAMETER_MM}mm對位孔，不含浮雕）。`;
+        return;
+      }
+
       const srcCanvas = getCroppedCanvas(w,h);
       const imageData = srcCanvas.getContext('2d').getImageData(0,0,w,h);
       const brightness = +document.getElementById('brightRange').value;
@@ -2248,7 +2272,6 @@
       const gray = applyBrightnessContrast(grayRaw, brightness, contrast);
 
       const meshLongEdge = +document.getElementById('meshRange').value;
-      const baseT = Math.max(0.2, +document.getElementById('baseThicknessInput').value || 1.0);
       const reliefT = Math.max(0.1, +document.getElementById('reliefThicknessInput').value || 2.0);
 
       const {data:gridGray, gw, gh} = downsampleGray(gray, w, h, meshLongEdge);
@@ -2256,7 +2279,6 @@
       // 浮雕實體（置中內嵌在外擴底板邊框中央，偏移STL_BLEED_MM）＋外擴底板邊框（含四角對位孔）
       // 各自都是獨立、密合拼接的watertight實體，一起輸出到同一個STL檔——多個緊貼/重疊的實體
       // 放進同一個STL檔是常見且安全的做法，slicer會自動視為一個連通的可列印體積。
-      const triangles = [];
       collectHeightmapTriangles(triangles, gridGray, gw, gh, wmm, hmm, baseT, reliefT, invert, STL_BLEED_MM, STL_BLEED_MM);
       collectFrameTriangles(triangles, wmm + 2*STL_BLEED_MM, hmm + 2*STL_BLEED_MM, STL_BLEED_MM, baseT, STL_HOLE_INSET_MM, STL_HOLE_DIAMETER_MM, STL_HOLE_CELL_SIZE_MM);
       const blob = serializeSTL(triangles);
