@@ -248,6 +248,7 @@
           <div class="cap" id="prevLineCap">日式似顏繪風格（熄燈裝飾層）</div>
         </div>
       </div>
+      <label style="margin-top:10px;"><input type="checkbox" id="previewMirrorToggle" style="width:auto; display:inline-block; margin-right:6px;">左右鏡射翻轉（下載列印圖層會依此設定輸出）</label>
       </div>
     </section>
 
@@ -278,7 +279,7 @@
         <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩），內含原始照片、灰階高度圖、外層裝飾層三張圖層。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。<strong>外層裝飾層圖層會自動左右鏡像翻轉後再輸出</strong>，與畫面預覽方向相反。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
+      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩），內含原始照片、灰階高度圖、外層裝飾層三張圖層。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。<strong>輸出的三張圖層是否左右鏡射翻轉，依上方「即時預覽 — 各圖層」下方的鏡射翻轉開關目前狀態決定</strong>。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
       </div>
     </section>
 
@@ -1006,9 +1007,9 @@
     drawAlignmentMarks(c.getContext('2d'),w,h,wmm,hmm, markColor || 'rgba(150,70,255,0.85)');
     return c;
   }
-  // 下載/匯出用：外擴出血邊，並水平鏡像翻轉（外層裝飾層列印圖層固定與畫面預覽左右相反）
+  // 下載/匯出用：外擴出血邊
   function renderSketchPrintCanvas(sketchGray, w, h, wmm, hmm, markColor){
-    return addPrintBleed(mirrorCanvasHorizontally(sketchContentCanvas(sketchGray, w, h)), wmm, hmm, markColor || 'rgba(150,70,255,0.85)');
+    return addPrintBleed(sketchContentCanvas(sketchGray, w, h), wmm, hmm, markColor || 'rgba(150,70,255,0.85)');
   }
 
   // 遮罩外區域填白（用於全彩AI風格圖層：只呈現主體，忽略背景），直接在原canvas上繪製並回傳
@@ -1125,10 +1126,9 @@
     drawAlignmentMarks(ctx, w, h, wmm, hmm, 'rgba(0,0,0,0.55)');
     return c;
   }
-  // 下載/匯出用：外擴出血邊，並水平鏡像翻轉（外層裝飾層列印圖層固定與畫面預覽左右相反；
-  // resizedCanvas已經是純內容、無對位記號）
+  // 下載/匯出用：外擴出血邊（resizedCanvas已經是純內容、無對位記號）
   function renderAnimePrintCanvas(resizedCanvas, wmm, hmm){
-    return addPrintBleed(mirrorCanvasHorizontally(resizedCanvas), wmm, hmm, 'rgba(0,0,0,0.55)');
+    return addPrintBleed(resizedCanvas, wmm, hmm, 'rgba(0,0,0,0.55)');
   }
 
   // 依目前選中的外層裝飾層模式，計算「熄燈裝飾層」的預覽用canvas（低解析度，供即時預覽/合成預覽使用）
@@ -1217,7 +1217,8 @@
     ctx.restore();
   }
 
-  // 水平鏡像翻轉整張canvas內容（僅用於外層裝飾層的下載/匯出圖層，讓列印結果與螢幕預覽左右相反）
+  // 水平鏡像翻轉整張canvas內容（供「即時預覽 — 各圖層」下方的左右鏡射翻轉開關使用，
+  // 開啟時即時預覽/合成預覽/下載列印頁面PDF會統一套用同一份鏡射狀態）
   function mirrorCanvasHorizontally(canvas){
     const w = canvas.width, h = canvas.height;
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -1226,6 +1227,9 @@
     ctx.scale(-1, 1);
     ctx.drawImage(canvas, 0, 0);
     return c;
+  }
+  function isPreviewMirrorEnabled(){
+    return document.getElementById('previewMirrorToggle').checked;
   }
 
   // 下載/匯出專用：把已經畫好的內容canvas（尺寸=wmm×hmm）放進一張外擴PRINT_BLEED_MM的新畫布正中央
@@ -1594,10 +1598,13 @@
     }
   }
 
+  // 目前drawInto()唯一的呼叫者是「即時預覽 — 各圖層」的3張卡片（prevOriginal/prevGray/prevLine），
+  // 因此直接在這裡統一套用左右鏡射翻轉開關，不需要逐一呼叫端各自處理
   function drawInto(canvasId, srcCanvas){
     const target = document.getElementById(canvasId);
-    target.width = srcCanvas.width; target.height = srcCanvas.height;
-    target.getContext('2d').drawImage(srcCanvas,0,0);
+    const finalCanvas = isPreviewMirrorEnabled() ? mirrorCanvasHorizontally(srcCanvas) : srcCanvas;
+    target.width = finalCanvas.width; target.height = finalCanvas.height;
+    target.getContext('2d').drawImage(finalCanvas,0,0);
   }
 
   // ---------- 合成預覽（熄燈 / 點燈） ----------
@@ -1610,6 +1617,8 @@
       renderComposite();
     });
   });
+  // 左右鏡射翻轉開關：純顯示/輸出層級的最終翻轉，不影響AI快取，切換時只需重繪目前已算好的內容
+  document.getElementById('previewMirrorToggle').addEventListener('change', scheduleUpdate);
 
   // 色溫(K)轉近似RGB光色（Tanner Helland演算法的常見實作），用於模擬背光燈條的實際色光，
   // 3000K附近偏暖橘、6500K附近接近白光
@@ -1676,6 +1685,12 @@
       ctx.fillStyle = `rgb(${Math.round(tint.r)},${Math.round(tint.g)},${Math.round(tint.b)})`;
       ctx.fillRect(0,0,w,h);
       ctx.globalCompositeOperation = 'source-over';
+    }
+
+    if(isPreviewMirrorEnabled()){
+      const flipped = mirrorCanvasHorizontally(out);
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(flipped,0,0);
     }
   }
 
@@ -1795,7 +1810,10 @@
       if(statusCb) statusCb(`處理中（${i+1}/${jobs.length}）：${jobLabel}…`);
       await new Promise(r=>setTimeout(r,0)); // 讓出主執行緒，讓狀態文字先畫出來
 
-      const layerCanvas = await jobs[i].make();
+      let layerCanvas = await jobs[i].make();
+      // 依「即時預覽 — 各圖層」下方的左右鏡射翻轉開關，統一套用在每張輸出圖層（含出血邊與對位記號，
+      // 四角記號本身對稱，整張翻轉不影響其位置正確性），確保下載結果跟目前畫面預覽的鏡射狀態一致
+      if(isPreviewMirrorEnabled()) layerCanvas = mirrorCanvasHorizontally(layerCanvas);
 
       if(idxOnPage >= grid.perPage){ pages.push(curPage); startNewPage(); }
       const col = idxOnPage % grid.cols, row = Math.floor(idxOnPage / grid.cols);
