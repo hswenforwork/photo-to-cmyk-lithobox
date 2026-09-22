@@ -238,17 +238,20 @@
         <div class="layerCard">
           <canvas id="prevOriginal"></canvas>
           <div class="cap">原始照片（裁切構圖後）</div>
+          <label style="font-size:0.76rem; margin:4px 0 0;"><input type="checkbox" id="mirrorOriginalToggle" style="width:auto; display:inline-block; margin-right:4px;">左右鏡射</label>
         </div>
         <div class="layerCard">
           <canvas id="prevGray"></canvas>
           <div class="cap">灰階高度圖（3D列印）</div>
+          <label style="font-size:0.76rem; margin:4px 0 0;"><input type="checkbox" id="mirrorGrayToggle" style="width:auto; display:inline-block; margin-right:4px;">左右鏡射</label>
         </div>
         <div class="layerCard">
           <canvas id="prevLine"></canvas>
           <div class="cap" id="prevLineCap">日式似顏繪風格（熄燈裝飾層）</div>
+          <label style="font-size:0.76rem; margin:4px 0 0;"><input type="checkbox" id="mirrorLineToggle" style="width:auto; display:inline-block; margin-right:4px;">左右鏡射</label>
         </div>
       </div>
-      <label style="margin-top:10px;"><input type="checkbox" id="previewMirrorToggle" style="width:auto; display:inline-block; margin-right:6px;">左右鏡射翻轉（下載列印圖層會依此設定輸出）</label>
+      <div class="note">各圖層左右鏡射翻轉各自獨立設定，下載列印圖層PDF會依每張圖層對應開關的當下狀態輸出方向；即時合成預覽固定以原始方向顯示，不受這些開關影響。</div>
       </div>
     </section>
 
@@ -279,7 +282,7 @@
         <button class="btn primary" id="dlPrintPages">下載列印頁面 PDF（自動排版於A4，CMYK色彩）</button>
       </div>
       <div class="statusLine" id="statusLine"></div>
-      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩），內含原始照片、灰階高度圖、外層裝飾層三張圖層。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。<strong>輸出的三張圖層是否左右鏡射翻轉，依上方「即時預覽 — 各圖層」下方的鏡射翻轉開關目前狀態決定</strong>。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
+      <div class="note">自動排版於A4紙（預留5mm列印邊界），輸出成單一PDF（DeviceCMYK色彩），內含原始照片、灰階高度圖、外層裝飾層三張圖層。每張圖層會外擴5mm出血邊，對位十字＋打孔圓點（直徑3mm）畫在出血邊正中央，跟⑥3D列印底板對位孔位置對齊。請於印表機設定選擇「實際尺寸／100%」，列印後沿對位十字內側2.5mm處裁切。<strong>每張圖層是否左右鏡射翻轉，各自依上方「即時預覽 — 各圖層」對應卡片下方開關的當下狀態決定</strong>。若外層裝飾層使用日式似顏繪風格，下載前請先在④按「產生／更新預覽」，否則下載會被擋下。</div>
       </div>
     </section>
 
@@ -1217,8 +1220,8 @@
     ctx.restore();
   }
 
-  // 水平鏡像翻轉整張canvas內容（供「即時預覽 — 各圖層」下方的左右鏡射翻轉開關使用，
-  // 開啟時即時預覽/合成預覽/下載列印頁面PDF會統一套用同一份鏡射狀態）
+  // 水平鏡像翻轉整張canvas內容（供「即時預覽 — 各圖層」每張圖層各自的左右鏡射翻轉開關使用，
+  // 三個開關各自獨立，只影響該圖層本身的即時預覽與下載列印頁面PDF；即時合成預覽不受影響）
   function mirrorCanvasHorizontally(canvas){
     const w = canvas.width, h = canvas.height;
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -1228,8 +1231,8 @@
     ctx.drawImage(canvas, 0, 0);
     return c;
   }
-  function isPreviewMirrorEnabled(){
-    return document.getElementById('previewMirrorToggle').checked;
+  function isMirrorEnabled(toggleId){
+    return document.getElementById(toggleId).checked;
   }
 
   // 下載/匯出專用：把已經畫好的內容canvas（尺寸=wmm×hmm）放進一張外擴PRINT_BLEED_MM的新畫布正中央
@@ -1598,11 +1601,16 @@
     }
   }
 
-  // 目前drawInto()唯一的呼叫者是「即時預覽 — 各圖層」的3張卡片（prevOriginal/prevGray/prevLine），
-  // 因此直接在這裡統一套用左右鏡射翻轉開關，不需要逐一呼叫端各自處理
+  // canvasId對應各自獨立的左右鏡射翻轉開關（見「即時預覽 — 各圖層」每張卡片下方的開關）
+  const PREVIEW_MIRROR_TOGGLE_BY_CANVAS = {
+    prevOriginal: 'mirrorOriginalToggle',
+    prevGray: 'mirrorGrayToggle',
+    prevLine: 'mirrorLineToggle',
+  };
   function drawInto(canvasId, srcCanvas){
     const target = document.getElementById(canvasId);
-    const finalCanvas = isPreviewMirrorEnabled() ? mirrorCanvasHorizontally(srcCanvas) : srcCanvas;
+    const toggleId = PREVIEW_MIRROR_TOGGLE_BY_CANVAS[canvasId];
+    const finalCanvas = (toggleId && isMirrorEnabled(toggleId)) ? mirrorCanvasHorizontally(srcCanvas) : srcCanvas;
     target.width = finalCanvas.width; target.height = finalCanvas.height;
     target.getContext('2d').drawImage(finalCanvas,0,0);
   }
@@ -1617,8 +1625,11 @@
       renderComposite();
     });
   });
-  // 左右鏡射翻轉開關：純顯示/輸出層級的最終翻轉，不影響AI快取，切換時只需重繪目前已算好的內容
-  document.getElementById('previewMirrorToggle').addEventListener('change', scheduleUpdate);
+  // 各圖層左右鏡射翻轉開關：純顯示/輸出層級的最終翻轉，三個開關各自獨立、不影響AI快取，
+  // 切換時只需重繪目前已算好的內容
+  ['mirrorOriginalToggle','mirrorGrayToggle','mirrorLineToggle'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', scheduleUpdate);
+  });
 
   // 色溫(K)轉近似RGB光色（Tanner Helland演算法的常見實作），用於模擬背光燈條的實際色光，
   // 3000K附近偏暖橘、6500K附近接近白光
@@ -1685,12 +1696,6 @@
       ctx.fillStyle = `rgb(${Math.round(tint.r)},${Math.round(tint.g)},${Math.round(tint.b)})`;
       ctx.fillRect(0,0,w,h);
       ctx.globalCompositeOperation = 'source-over';
-    }
-
-    if(isPreviewMirrorEnabled()){
-      const flipped = mirrorCanvasHorizontally(out);
-      ctx.clearRect(0,0,w,h);
-      ctx.drawImage(flipped,0,0);
     }
   }
 
@@ -1789,9 +1794,9 @@
     const modeLabel = m => m==='sketch' ? '外層裝飾層－素描風' : '外層裝飾層－日式似顏繪風格';
 
     const jobs = [
-      { label:'原始照片', make: () => renderOriginalPrintCanvas(imageData, w, h, wmm, hmm) },
-      { label:'灰階高度圖', make: () => renderGrayPrintCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
-      { label: modeLabel(lineArtMode), make: async () => { primary = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm); return primary.lineCanvas; } },
+      { label:'原始照片', mirrorToggleId:'mirrorOriginalToggle', make: () => renderOriginalPrintCanvas(imageData, w, h, wmm, hmm) },
+      { label:'灰階高度圖', mirrorToggleId:'mirrorGrayToggle', make: () => renderGrayPrintCanvas(applyBrightnessContrast(grayRaw,brightness,contrast), w, h, wmm, hmm, invert) },
+      { label: modeLabel(lineArtMode), mirrorToggleId:'mirrorLineToggle', make: async () => { primary = await computeLineArtFull(lineArtMode, grayRaw, w, h, wmm, hmm); return primary.lineCanvas; } },
     ];
 
     const pages = [];
@@ -1811,9 +1816,10 @@
       await new Promise(r=>setTimeout(r,0)); // 讓出主執行緒，讓狀態文字先畫出來
 
       let layerCanvas = await jobs[i].make();
-      // 依「即時預覽 — 各圖層」下方的左右鏡射翻轉開關，統一套用在每張輸出圖層（含出血邊與對位記號，
-      // 四角記號本身對稱，整張翻轉不影響其位置正確性），確保下載結果跟目前畫面預覽的鏡射狀態一致
-      if(isPreviewMirrorEnabled()) layerCanvas = mirrorCanvasHorizontally(layerCanvas);
+      // 依該圖層對應的左右鏡射翻轉開關（見「即時預覽 — 各圖層」各卡片下方），套用在這張輸出圖層
+      // （含出血邊與對位記號，四角記號本身對稱，整張翻轉不影響其位置正確性），確保下載結果跟目前
+      // 畫面預覽該圖層的鏡射狀態一致
+      if(isMirrorEnabled(jobs[i].mirrorToggleId)) layerCanvas = mirrorCanvasHorizontally(layerCanvas);
 
       if(idxOnPage >= grid.perPage){ pages.push(curPage); startNewPage(); }
       const col = idxOnPage % grid.cols, row = Math.floor(idxOnPage / grid.cols);
