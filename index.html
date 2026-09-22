@@ -128,7 +128,19 @@
         <option value="6x4">6×4 吋相片紙</option>
         <option value="7x5">7×5 吋相片紙</option>
         <option value="5x3.5">5×3.5 吋相片紙（L判標準尺寸）</option>
+        <option value="custom">自訂尺寸（mm）</option>
       </select>
+      <div class="row hidden" id="customSizeRow" style="margin-top:8px;">
+        <div>
+          <label>寬 (mm)</label>
+          <input type="text" id="customWmmInput" value="148">
+        </div>
+        <div>
+          <label>高 (mm)</label>
+          <input type="text" id="customHmmInput" value="210">
+        </div>
+      </div>
+      <div class="dimHint hidden" id="customSizeHint">寬／高需介於20～400mm之間</div>
       <label>方向</label>
       <select id="orientSelect">
         <option value="portrait">直向</option>
@@ -335,6 +347,8 @@
     "7x5": { wmm: 7*25.4, hmm: 5*25.4 },
     "5x3.5": { wmm: 5*25.4, hmm: 3.5*25.4 }
   };
+  const CUSTOM_SIZE_MIN_MM = 20;  // 自訂尺寸的合理下限，避免過小尺寸讓後續版面/圓孔計算失真
+  const CUSTOM_SIZE_MAX_MM = 400; // 自訂尺寸的合理上限，避免600dpi下canvas/記憶體用量過大
   const MARK_INSET_MM = 5; // 即時預覽（無出血邊）用的對位十字＋打孔記號距離畫面邊界的固定距離（mm）
   // 下載/匯出的列印圖層會在步驟①輸出尺寸（wmm×hmm）外緣再外擴這個距離作為出血邊，內容仍是原始
   // wmm×hmm、置中；對位十字＋打孔記號改用PRINT_MARK_INSET_MM（見下方）距離這個外擴後的新邊界。
@@ -557,11 +571,18 @@
   }
 
   function mmToPx(mm, dpi){ return Math.round(mm/25.4*dpi); }
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
   function currentPhysicalSize(){
     const key = document.getElementById('sizeSelect').value;
     const orient = document.getElementById('orientSelect').value;
-    let {wmm,hmm} = SIZES[key];
+    let wmm, hmm;
+    if(key === 'custom'){
+      wmm = clamp(+document.getElementById('customWmmInput').value || CUSTOM_SIZE_MIN_MM, CUSTOM_SIZE_MIN_MM, CUSTOM_SIZE_MAX_MM);
+      hmm = clamp(+document.getElementById('customHmmInput').value || CUSTOM_SIZE_MIN_MM, CUSTOM_SIZE_MIN_MM, CUSTOM_SIZE_MAX_MM);
+    } else {
+      ({wmm,hmm} = SIZES[key]);
+    }
     if(orient === 'landscape' && hmm > wmm){ const t=wmm; wmm=hmm; hmm=t; }
     if(orient === 'portrait' && wmm > hmm){ const t=wmm; wmm=hmm; hmm=t; }
     // 輸出尺寸四捨五入至整數mm，避免出現如152.4mm的小數尺寸
@@ -622,9 +643,19 @@
     image.src = url;
   }
 
-  document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
+  function updateCustomSizeRowVisibility(){
+    const isCustom = document.getElementById('sizeSelect').value === 'custom';
+    document.getElementById('customSizeRow').classList.toggle('hidden', !isCustom);
+    document.getElementById('customSizeHint').classList.toggle('hidden', !isCustom);
+  }
+  updateCustomSizeRowVisibility();
+
+  document.getElementById('sizeSelect').addEventListener('change', ()=>{ updateCustomSizeRowVisibility(); updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
   document.getElementById('orientSelect').addEventListener('change', ()=>{ updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
   document.getElementById('mirrorFlip').addEventListener('change', ()=>{ drawCropper(); markAnimePreviewStale(); scheduleUpdate(); });
+  ['customWmmInput','customHmmInput'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', ()=>{ updateDimHint(); drawCropper(); markAnimePreviewStale(); scheduleUpdate(); updateSTLEstimate(); });
+  });
 
   function updateDimHint(){
     const {w,h,wmm,hmm} = fullPixelSize();
